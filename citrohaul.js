@@ -55,10 +55,8 @@ addEventListener("resize", (e) => {
 // run the renderer
 Render.run(render);
 
-// create runner
+// Create runner and run the engine
 var runner = Runner.create();
-
-// run the engine
 Runner.run(runner, engine);
 
 
@@ -94,6 +92,7 @@ class BodyType {
     static PLANK = new BodyType("plank");
     static BOX = new BodyType("box");
     static JOINT = new BodyType("joint");
+    static SPRING = new BodyType("spring");
 
     constructor(type) {
         this.type = type;
@@ -117,8 +116,13 @@ class BodyType {
                 }
                 break;
             case "joint":
+                this.options = { };
+                break;
+            case "spring":
                 this.options = {
+                    stiffness: 0.1
                 }
+                break;
             default:
                 this.options = { };
         }
@@ -160,6 +164,8 @@ class BodyType {
                     {...this.options, ...options});
                 break;
 
+            case "spring":
+                // Same as joints, with different options
             case "joint":
                 var bodies = Composite.allBodies(engine.world);
                 var pointA = Vector.create(objX, objY);
@@ -237,7 +243,10 @@ addEventListener("mousemove", (e) => {
         var mouseY = render.mouse.position.y;
 
         Composite.remove(engine.world, newBody);
-        newBody = bodyType.create(newBodyProperties.objX, newBodyProperties.objY, mouseX, mouseY, { isStatic: true });
+        newBody = bodyType.create(
+            newBodyProperties.objX, newBodyProperties.objY,
+            mouseX, mouseY,
+            { isStatic: true });
         Composite.add(engine.world, newBody);
     }
 });
@@ -251,7 +260,10 @@ addEventListener("mouseup", (e) => {
         var mouseY = render.mouse.position.y;
 
         Composite.remove(engine.world, newBody);
-        newBody = bodyType.create(newBodyProperties.objX, newBodyProperties.objY, mouseX, mouseY, { mouseup: true });
+        newBody = bodyType.create(
+            newBodyProperties.objX, newBodyProperties.objY,
+            mouseX, mouseY,
+            { mouseup: true });
         if (newBody) {
             Composite.add(engine.world, newBody);
         }
@@ -324,6 +336,16 @@ addEventListener("keydown", (e) => {
             if (!newBody) {
                 bodyType = BodyType.JOINT;
             }
+            break;
+        case "6":
+            if (!newBody) {
+                bodyType = BodyType.SPRING;
+            }
+            break;
+
+        // Spacebar: pause the engine
+        case " ":
+            runner.enabled = !runner.enabled;
             break;
     }
 });

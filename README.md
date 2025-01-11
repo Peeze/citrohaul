@@ -13,7 +13,12 @@ Draw objects with mouse. Change object type with keys:
 - `2`: Circle
 - `3`: Plank
 - `4`: Box
-- `5`: Joints between bodies or fixed points
+- `5`: Joint between bodies or fixed points
+- `6`: Spring, a wobblier joint
+
+Other controls:
+- `ArrowUp` and `ArrowDown`: Spin all wheels
+- `Space`: Toggle simulation/drawing mode
 
 ## License
 
