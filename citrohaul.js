@@ -138,6 +138,7 @@ class BodyType {
                     radius,
                     {...this.options, ...options});
                 break;
+
             case "plank":
                 var midX = (objX + mouseX) / 2;
                 var midY = (objY + mouseY) / 2;
@@ -151,25 +152,45 @@ class BodyType {
                     length, 10,
                     {...this.options, ...options, angle: angle});
                 break;
+
             case "box":
                 body = Bodies.rectangle(
                     (objX + mouseX) / 2, (objY + mouseY) / 2,
                     mouseX - objX, mouseY - objY,
                     {...this.options, ...options});
                 break;
+
             case "joint":
                 var bodies = Composite.allBodies(engine.world);
                 var pointA = Vector.create(objX, objY);
                 var bodyA = Query.point(bodies, pointA)[0];
-                if (bodyA) {pointA = null;}  // Only pass either pointA or bodyA
+                // If body is not null, calculate offset from centre
+                if (bodyA) {
+                    pointA = Vector.sub(pointA, bodyA.position);
+                    // For wheels, snap to center if sufficiently close
+                    if (bodyA.bodyType == "wheel" && Vector.magnitude(pointA) < 10) {
+                        pointA = Vector.create(0, 0);
+                    }
+                }
 
                 var pointB = Vector.create(mouseX, mouseY);
                 var bodyB = Query.point(bodies, pointB)[0];
-                if (bodyB) {pointB = null;}  // Only pass either pointA or bodyA
+                // If body is not null, calculate offset from centre
+                // For wheels, snap to center if sufficiently close
+                if (bodyB) {
+                    pointB = Vector.sub(pointB, bodyB.position);
+                    // For wheels, snap to center if sufficiently close
+                    if (bodyB.bodyType == "wheel" && Vector.magnitude(pointB) < 10) {
+                        pointB = Vector.create(0, 0);
+                    }
+                }
 
-                // If start and end of constraints are not a Body, do not add
-                // it to the world
-                if (!bodyA && !bodyB && options.mouseup) {
+                // Do not add to the world if:
+                // - Both start and end of constraints are not a body
+                // - Start and end are the same body
+                if (options.mouseup && (
+                        (!bodyA && !bodyB)
+                        || bodyA === bodyB)) {
                     return null;
                 }
 
