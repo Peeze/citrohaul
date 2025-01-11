@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+
+<!--
+    Started on 9 Jan 2025 to - hopefully - one day produce something akin
+    to the game of Nitrohaul.
+ -->
+
+<head>
+    <script src="lib/matter.js"></script>
+<style>
+:root {
+    --header-size: 0px;
+    --footer-size: 0px;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    height: 100%;
+}
+
+div {
+    position: absolute;
+    width: 100%
+}
+
+.header {
+    height: var(--header-size);
+    background: white;
+
+    top: 0;
+}
+.middle {
+    top: var(--header-size);
+    bottom: var(--footer-size);
+}
+
+.footer {
+    height: var(--footer-size);
+    background: white;
+
+    bottom: 0
+}
+
+#render-canvas {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+}
+</style>
+</head>
+
+<body>
+    <div class="header"></div>
+    <div class="middle" id="render-canvas-container">
+        <canvas id="render-canvas"> </canvas>
+    </div>
+    <div class="footer"></div>
+    <script src="citrohaul.js"></script>
+</body>
