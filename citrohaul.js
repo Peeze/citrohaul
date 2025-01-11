@@ -126,36 +126,37 @@ class BodyType {
 
     // Return new object of the given type
     create(objX, objY, mouseX, mouseY, options) {
+        var body;
         switch (this.type) {
             case "wheel":
                 // Same as circle, but will be added to bookkeeping (list wheels)
             case "circle":
                 var radius = Vector.magnitude(Vector.create(mouseX - objX, mouseY - objY));
                 radius = Math.max(radius, 10);
-                return Bodies.circle(
+                body = Bodies.circle(
                     objX, objY,
                     radius,
                     {...this.options, ...options});
+                break;
             case "plank":
                 var midX = (objX + mouseX) / 2;
                 var midY = (objY + mouseY) / 2;
                 var diffX = mouseX - objX;
                 var diffY = mouseY - objY;
-                var angle = 0;
-                if (diffX != 0) {
-                    angle = Math.atan(diffY / diffX);
-                }
+                var angle = (diffX != 0) ? Math.atan(diffY / diffX) : 0;
                 var length = Math.sqrt(diffX * diffX + diffY * diffY);
 
-                return Bodies.rectangle(
+                body = Bodies.rectangle(
                     (objX + mouseX) / 2, (objY + mouseY) / 2,
                     length, 10,
                     {...this.options, ...options, angle: angle});
+                break;
             case "box":
-                return Bodies.rectangle(
+                body = Bodies.rectangle(
                     (objX + mouseX) / 2, (objY + mouseY) / 2,
                     mouseX - objX, mouseY - objY,
                     {...this.options, ...options});
+                break;
             case "joint":
                 var bodies = Composite.allBodies(engine.world);
                 var pointA = Vector.create(objX, objY);
@@ -169,16 +170,22 @@ class BodyType {
                 // If start and end of constraints are not a Body, do not add
                 // it to the world
                 if (!bodyA && !bodyB && options.mouseup) {
-                    return undefined;
+                    return null;
                 }
 
-                return Constraint.create(
+                body = Constraint.create(
                     {...this.options, ...options,
                     bodyA: bodyA, bodyB: bodyB,
                     pointA: pointA, pointB: pointB});
+                break;
             default:
                 console.warn(`Body type "${this.type}" not implemented`);
+                return null;
         }
+
+        // Add bodyType attribute to body
+        body.bodyType = this.type;
+        return body;
     }
 }
 
