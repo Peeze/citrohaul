@@ -87,7 +87,8 @@ Composite.add(engine.world, [ground, box1, box3, box4]);
 class BodyType {
     static WHEEL = new BodyType("wheel");
     static CIRCLE = new BodyType("circle");
-    static RECTANGLE = new BodyType("rectangle");
+    static PLANK = new BodyType("plank");
+    static BOX = new BodyType("box");
 
     constructor(type) {
         this.type = type;
@@ -101,12 +102,15 @@ class BodyType {
                     frictionStatic: 10
                 }
                 break;
-            case "rectangle":
+            case "circle":
+            case "plank":
+            case "box":
                 this.options = {
                     restitution: 0.3,
                     friction: 0.8,
                     frictionStatic: 10
                 }
+                break;
             default:
                 this.options = { };
         }
@@ -124,7 +128,22 @@ class BodyType {
                     objX, objY,
                     radius,
                     {...this.options, ...options});
-            case "rectangle":
+            case "plank":
+                var midX = (objX + mouseX) / 2;
+                var midY = (objY + mouseY) / 2;
+                var diffX = mouseX - objX;
+                var diffY = mouseY - objY;
+                var angle = 0;
+                if (diffX != 0) {
+                    angle = Math.atan(diffY / diffX);
+                }
+                var length = Math.sqrt(diffX * diffX + diffY * diffY);
+
+                return Bodies.rectangle(
+                    (objX + mouseX) / 2, (objY + mouseY) / 2,
+                    length, 10,
+                    {...this.options, ...options, angle: angle});
+            case "box":
                 return Bodies.rectangle(
                     (objX + mouseX) / 2, (objY + mouseY) / 2,
                     mouseX - objX, mouseY - objY,
@@ -235,7 +254,12 @@ addEventListener("keydown", (e) => {
             break;
         case "3":
             if (!newBody) {
-                bodyType = BodyType.RECTANGLE;
+                bodyType = BodyType.PLANK;
+            }
+            break;
+        case "4":
+            if (!newBody) {
+                bodyType = BodyType.BOX;
             }
             break;
     }
