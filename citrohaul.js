@@ -15,7 +15,9 @@ var Engine = Matter.Engine,
     Bounds = Matter.Bounds,
     Vector = Matter.Vector,
     Mouse = Matter.Mouse,
-    Composite = Matter.Composite;
+    Query = Matter.Query,
+    Composite = Matter.Composite,
+    Constraint = Matter.Constraint;
 
 // create an engine
 var engine = Engine.create();
@@ -82,6 +84,8 @@ var box4 = Bodies.rectangle(-350, 950, 80, 80, {...staticBodyOptions, angle: Mat
 // add all of the bodies to the world
 Composite.add(engine.world, [ground, box1, box3, box4]);
 
+// Keep list of wheels
+var wheels = [];
 
 // Class to contain factory functions for each type of object to be created
 class BodyType {
@@ -89,6 +93,7 @@ class BodyType {
     static CIRCLE = new BodyType("circle");
     static PLANK = new BodyType("plank");
     static BOX = new BodyType("box");
+    static JOINT = new BodyType("joint");
 
     constructor(type) {
         this.type = type;
@@ -111,6 +116,9 @@ class BodyType {
                     frictionStatic: 10
                 }
                 break;
+            case "joint":
+                this.options = {
+                }
             default:
                 this.options = { };
         }
@@ -148,6 +156,26 @@ class BodyType {
                     (objX + mouseX) / 2, (objY + mouseY) / 2,
                     mouseX - objX, mouseY - objY,
                     {...this.options, ...options});
+            case "joint":
+                var bodies = Composite.allBodies(engine.world);
+                var pointA = Vector.create(objX, objY);
+                var bodyA = Query.point(bodies, pointA)[0];
+                if (bodyA) {pointA = null;}  // Only pass either pointA or bodyA
+
+                var pointB = Vector.create(mouseX, mouseY);
+                var bodyB = Query.point(bodies, pointB)[0];
+                if (bodyB) {pointB = null;}  // Only pass either pointA or bodyA
+
+                // If start and end of constraints are not a Body, do not add
+                // it to the world
+                if (!bodyA && !bodyB && options.mouseup) {
+                    return undefined;
+                }
+
+                return Constraint.create(
+                    {...this.options, ...options,
+                    bodyA: bodyA, bodyB: bodyB,
+                    pointA: pointA, pointB: pointB});
             default:
                 console.warn(`Body type "${this.type}" not implemented`);
         }
@@ -157,7 +185,6 @@ class BodyType {
 var bodyType = BodyType.WHEEL; // Current body type
 var newBody = null; // Body currently under creation
 var newBodyProperties = { };
-var wheels = [];
 
 // EVENTS
 // Add bodies on mouseclick
@@ -196,8 +223,10 @@ addEventListener("mouseup", (e) => {
         var mouseY = render.mouse.position.y;
 
         Composite.remove(engine.world, newBody);
-        newBody = bodyType.create(newBodyProperties.objX, newBodyProperties.objY, mouseX, mouseY);
-        Composite.add(engine.world, newBody);
+        newBody = bodyType.create(newBodyProperties.objX, newBodyProperties.objY, mouseX, mouseY, { mouseup: true });
+        if (newBody) {
+            Composite.add(engine.world, newBody);
+        }
 
         // Keep list of all wheels
         if (bodyType === BodyType.WHEEL) {
@@ -205,6 +234,7 @@ addEventListener("mouseup", (e) => {
         }
 
         newBody = null;
+        newBodyProperties = { };
     }
 });
 
@@ -260,6 +290,11 @@ addEventListener("keydown", (e) => {
         case "4":
             if (!newBody) {
                 bodyType = BodyType.BOX;
+            }
+            break;
+        case "5":
+            if (!newBody) {
+                bodyType = BodyType.JOINT;
             }
             break;
     }

@@ -13,6 +13,7 @@ Draw objects with mouse. Change object type with keys:
 - `2`: Circle
 - `3`: Plank
 - `4`: Box
+- `5`: Joints between bodies or fixed points
 
 ## License
 
