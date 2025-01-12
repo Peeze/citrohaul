@@ -1,5 +1,10 @@
 // Silly project inspired by Nitrohaul.
 //
+// TODO:
+// - Add splices (wheels, lemons, grounds, background?)
+// - Disable collisions between objects drawn on top of each other
+// - Perhaps follow the lemons instead of wheels
+//
 // Created by (c) Peeze 2025.
 // Mozilla Public License 2.0
 
@@ -46,6 +51,7 @@ if (DEBUG_MODE) {
 
 // Keep list of wheels
 var wheels = [];
+var lemons = [];
 
 // Dynamic canvas size depending on container size
 // Follow wheels around
@@ -100,16 +106,24 @@ Runner.run(runner, engine);
 
 // Populate the WORLD
 // create a ground
-var ground = Bodies.rectangle(0, 0, 10000, 80, {
+var groundOptions = {
     isStatic: true,
     friction: 1,
     render: {
-        fillStyle: "#90BE6D"
+        fillStyle: "#90BE6D",
+        sprite: {
+            texture: "img/ground.png",
+            yOffset: 0.1
+        }
     }
-});
+}
+var ground = [];
+for (var x = -5000; x < 5000; x += 499) {
+    ground.push(Bodies.rectangle(x, 0, 500, 80, groundOptions));
+}
 
 // add all of the bodies to the world
-Composite.add(engine.world, [ground]);
+Composite.add(engine.world, ground);
 
 // Class to contain factory functions for each type of object to be created
 class BodyType {
@@ -132,7 +146,10 @@ class BodyType {
                     friction: 0.8,
                     frictionStatic: 10,
                     render: {
-                        fillStyle: "#1F1E1E"
+                        fillStyle: "#1F1E1E",
+                        sprite: {
+                            texture: "img/wheel2_512px.png",
+                        }
                     }
                 }
                 break;
@@ -168,9 +185,17 @@ class BodyType {
                     restitution: 0.1,
                     friction: 0.5,
                     frictionStatic: 2,
+                    frictionAir: 0.01,
                     setDensity: 0.005,
                     render: {
-                        fillStyle: "#f9c74f"
+                        fillStyle: "#f9c74f",
+                        sprite: {
+                            texture: "img/lemon2_64px.png",
+                            xScale: 0.65,
+                            yScale: 0.65,
+                            xOffset: -0.1,
+                            yOffset: 0.1
+                        }
                     }
                 }
                 break;
@@ -190,8 +215,12 @@ class BodyType {
                 // Final body cannot be static, override isStatic option
                 var radius = Vector.magnitude(Vector.create(mouseX - objX, mouseY - objY));
                 radius = Math.max(radius, 10);
+
                 body = [Bodies.circle(objX, objY, radius,
                     {...this.options, ...options, isStatic: !options.mouseup})];
+                var spriteScale = radius / 256;
+                body[0].render.sprite.xScale = spriteScale;
+                body[0].render.sprite.yScale = spriteScale;
 
                 // "Static wheels": not static for matter.js purposes, but
                 // constrained to their position, so that they can spin in a
@@ -293,7 +322,7 @@ class BodyType {
                 break;
 
             case "lemon":
-                var radius = 15;
+                var radius = 16;
 
                 // Cannot be static, override isStatic option
                 body = [Bodies.circle(
@@ -325,6 +354,8 @@ class BodyType {
         }
     }
 }
+
+
 
 var bodyType = BodyType.WHEEL; // Current body type
 var newBody = null; // Body currently under creation
@@ -380,6 +411,8 @@ addEventListener("mouseup", (e) => {
         // Keep list of all wheels
         if (bodyType === BodyType.WHEEL) {
             wheels.push(newBody[0]);
+        } else if (bodyType === BodyType.LEMON) {
+            lemons.push(newBody[0]);
         }
 
         newBody = null;
@@ -482,4 +515,3 @@ addEventListener("keyup", (e) => {
             break;
     }
 });
-
