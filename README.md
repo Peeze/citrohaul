@@ -19,9 +19,10 @@ Draw objects with mouse. Change object type with keys:
 - `6`: Spring, a wobblier joint
 - `7`: Lemon, cannot be connected with a joint or spring
 
-Other controls:
+Hold `Shift` while drawing an object to make it immovable.
+
 - `ArrowUp` and `ArrowDown`: Spin all wheels
-- `Space`: Toggle simulation/drawing mode
+- `Space`: Start/pause simulation
 
 ## License
 

@@ -59,8 +59,8 @@ Render.run(render);
 
 // Create runner and run the engine
 var runner = Runner.create();
+runner.enabled = false;
 Runner.run(runner, engine);
-
 
 // Populate the WORLD
 // create boxes and a ground
@@ -82,7 +82,7 @@ var box3 = Bodies.rectangle(950, 950, 80, 80, staticBodyOptions);
 var box4 = Bodies.rectangle(-350, 950, 80, 80, {...staticBodyOptions, angle: Math.PI / 4 });
 
 // add all of the bodies to the world
-Composite.add(engine.world, [ground, box1, box3, box4]);
+Composite.add(engine.world, [ground]);
 
 // Keep list of wheels
 var wheels = [];
@@ -140,18 +140,35 @@ class BodyType {
     }
 
     // Return new object of the given type
+    // Returns a list with the object at index 0 followed by any other objects
+    // to be created (such as constraints)
     create(objX, objY, mouseX, mouseY, options) {
         var body;
         switch (this.type) {
             case "wheel":
-                // Same as circle, but will be added to bookkeeping (list wheels)
+                // Same shape as circle, but will be tracked in a list
+                // Final body cannot be static, override isStatic option
+                var radius = Vector.magnitude(Vector.create(mouseX - objX, mouseY - objY));
+                radius = Math.max(radius, 10);
+                body = [Bodies.circle(objX, objY, radius,
+                    {...this.options, ...options, isStatic: !options.mouseup})];
+
+                // "Static wheels": not static for matter.js purposes, but
+                // constrained to their position, so that they can spin in a
+                // fixed position
+                // Return a list containing the wheel and the constraint.
+                if (shiftKey && bodyType.type == "wheel") {
+                    body.push(Constraint.create({bodyA: body[0], pointB: Vector.create(objX, objY)}));
+                    console.log(body[1]);
+                }
+
+                break;
+
             case "circle":
                 var radius = Vector.magnitude(Vector.create(mouseX - objX, mouseY - objY));
                 radius = Math.max(radius, 10);
-                body = Bodies.circle(
-                    objX, objY,
-                    radius,
-                    {...this.options, ...options});
+                body = [Bodies.circle(objX, objY, radius,
+                    {...this.options, ...options})];
                 break;
 
             case "plank":
@@ -162,17 +179,17 @@ class BodyType {
                 var angle = (diffX != 0) ? Math.atan(diffY / diffX) : 0;
                 var length = Math.sqrt(diffX * diffX + diffY * diffY);
 
-                body = Bodies.rectangle(
+                body = [Bodies.rectangle(
                     (objX + mouseX) / 2, (objY + mouseY) / 2,
                     length, 10,
-                    {...this.options, ...options, angle: angle});
+                    {...this.options, ...options, angle: angle})];
                 break;
 
             case "box":
-                body = Bodies.rectangle(
+                body = [Bodies.rectangle(
                     (objX + mouseX) / 2, (objY + mouseY) / 2,
                     mouseX - objX, mouseY - objY,
-                    {...this.options, ...options});
+                    {...this.options, ...options})];
                 break;
 
             case "spring":
@@ -227,21 +244,23 @@ class BodyType {
                 if (options.mouseup && (
                         (!bodyA && !bodyB)
                         || bodyA === bodyB)) {
-                    return null;
+                    return [];
                 }
 
-                body = Constraint.create(
+                body = [Constraint.create(
                     {...this.options, ...options,
                     bodyA: bodyA, bodyB: bodyB,
-                    pointA: pointA, pointB: pointB});
+                    pointA: pointA, pointB: pointB})];
                 break;
 
             case "lemon":
                 var radius = 15;
-                body = Bodies.circle(
+
+                // Cannot be static, override isStatic option
+                body = [Bodies.circle(
                     mouseX, mouseY,
                     radius,
-                    {...this.options, ...options});
+                    {...this.options, ...options, isStatic: !options.mouseup})];
                 break;
 
             default:
@@ -250,7 +269,7 @@ class BodyType {
         }
 
         // Add bodyType attribute to body
-        body.bodyType = this.type;
+        body[0].bodyType = this.type;
         return body;
     }
 }
@@ -265,26 +284,25 @@ var newBodyProperties = { };
 
 // On mousedown: create body at mouse position
 addEventListener("mousedown", (e) => {
-    newBodyProperties.objX = render.mouse.position.x;
-    newBodyProperties.objY = render.mouse.position.y;
+    if (!newBody) {
+        newBodyProperties.objX = render.mouse.position.x;
+        newBodyProperties.objY = render.mouse.position.y;
 
-    newBody = bodyType.create(
-        newBodyProperties.objX, newBodyProperties.objY,
-        render.mouse.position.x, render.mouse.position.y,
-        { isStatic: true });
-    Composite.add(engine.world, newBody);
+        newBody = bodyType.create(
+            newBodyProperties.objX, newBodyProperties.objY,
+            render.mouse.position.x, render.mouse.position.y,
+            { isStatic: true });
+        Composite.add(engine.world, newBody);
+    }
 });
 
 // On mousemove: update newBody
 addEventListener("mousemove", (e) => {
     if (newBody) {
-        var mouseX = render.mouse.position.x;
-        var mouseY = render.mouse.position.y;
-
         Composite.remove(engine.world, newBody);
         newBody = bodyType.create(
             newBodyProperties.objX, newBodyProperties.objY,
-            mouseX, mouseY,
+            render.mouse.position.x, render.mouse.position.y,
             { isStatic: true });
         Composite.add(engine.world, newBody);
     }
@@ -295,25 +313,22 @@ addEventListener("mouseup", (e) => {
     if (newBody) {
         //Body.setStatic(newBody, true);  // setStatic bugs, objects vanish, create a new body instead
 
-        var mouseX = render.mouse.position.x;
-        var mouseY = render.mouse.position.y;
-
         Composite.remove(engine.world, newBody);
+
+        // Make static object if Shift is pressed
+        // Except wheels and lemons
         newBody = bodyType.create(
             newBodyProperties.objX, newBodyProperties.objY,
-            mouseX, mouseY,
-            { mouseup: true });
-        if (newBody) {
+            render.mouse.position.x, render.mouse.position.y,
+            { mouseup: true, isStatic: shiftKey });
             Composite.add(engine.world, newBody);
-        }
 
         // Keep list of all wheels
         if (bodyType === BodyType.WHEEL) {
-            wheels.push(newBody);
+            wheels.push(newBody[0]);
         }
 
         newBody = null;
-        newBodyProperties = { };
     }
 });
 
@@ -334,9 +349,12 @@ function turnWheel(wheel, torque, responsiveness, maxVelocity, direction) {
     Body.setAngularVelocity(wheel, angularVelocity);
 }
 
+// Global variable
+var shiftKey = false;
+
 // On keydown
 addEventListener("keydown", (e) => {
-    switch (e.key) {
+    switch (e.code) {
         // Arrow keys: turn wheels
         case "ArrowDown":
             for (let i = 0; i < wheels.length; i++) {
@@ -350,46 +368,64 @@ addEventListener("keydown", (e) => {
             break;
 
         // Number keys: change body type
-        // (Do not change while a body is created)
-        case "1":
+        // Do not change while a body is created
+        // If Shift is pressed, create static object
+        case "Digit1":
             if (!newBody) {
                 bodyType = BodyType.WHEEL;
             }
             break;
-        case "2":
+        case "Digit2":
             if (!newBody) {
                 bodyType = BodyType.CIRCLE;
             }
             break;
-        case "3":
+        case "Digit3":
             if (!newBody) {
                 bodyType = BodyType.PLANK;
             }
             break;
-        case "4":
+        case "Digit4":
             if (!newBody) {
                 bodyType = BodyType.BOX;
             }
             break;
-        case "5":
+        case "Digit5":
             if (!newBody) {
                 bodyType = BodyType.JOINT;
             }
             break;
-        case "6":
+        case "Digit6":
             if (!newBody) {
                 bodyType = BodyType.SPRING;
             }
             break;
-        case "7":
+        case "Digit7":
             if (!newBody) {
                 bodyType = BodyType.LEMON;
             }
             break;
 
+        // Shift: toggle global variable shiftKey
+        case "ShiftLeft":
+        case "ShiftRight":
+            shiftKey = true;
+            break;
+
         // Spacebar: pause the engine
-        case " ":
+        case "Space":
             runner.enabled = !runner.enabled;
             break;
     }
 });
+
+addEventListener("keyup", (e) => {
+    switch (e.code) {
+        // Shift: toggle global variable shiftKey
+        case "ShiftLeft":
+        case "ShiftRight":
+            shiftKey = false;
+            break;
+    }
+});
+
