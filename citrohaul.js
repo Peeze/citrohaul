@@ -4,7 +4,7 @@
 // Mozilla Public License 2.0
 
 // Set the UP
-var DEBUG_MODE = true;
+var DEBUG_MODE = false;
 
 // module aliases
 var Engine = Matter.Engine,
@@ -35,11 +35,12 @@ var render = Render.create({
 
 // Modify options directly (setting them upon creation does not work for some reason)
 render.options.hasBounds = true;
-render.options.wireframes = true;
-render.options.background = "#FEF2D8";  // Background color (for later)
+render.options.wireframes = false;
+render.options.background = "#FFFFF2";  // Background color (for later)
 if (DEBUG_MODE) {
     render.options.showAxes = true;
     render.options.showMousePosition = true;
+    render.options.wireframes = true;
 }
 
 
@@ -99,11 +100,13 @@ Runner.run(runner, engine);
 
 // Populate the WORLD
 // create a ground
-var staticBodyOptions = {
+var ground = Bodies.rectangle(0, 0, 10000, 80, {
     isStatic: true,
-    friction: 1
-}
-var ground = Bodies.rectangle(0, 0, 10000, 80, staticBodyOptions);
+    friction: 1,
+    render: {
+        fillStyle: "#90BE6D"
+    }
+});
 
 // add all of the bodies to the world
 Composite.add(engine.world, [ground]);
@@ -127,7 +130,10 @@ class BodyType {
                 this.options = {
                     restitution: 0.3,
                     friction: 0.8,
-                    frictionStatic: 10
+                    frictionStatic: 10,
+                    render: {
+                        fillStyle: "#1F1E1E"
+                    }
                 }
                 break;
             case "circle":
@@ -136,15 +142,25 @@ class BodyType {
                 this.options = {
                     restitution: 0.3,
                     friction: 0.8,
-                    frictionStatic: 2
+                    frictionStatic: 2,
+                    render: {
+                        fillStyle: "#3E3D3D"
+                    }
                 }
                 break;
             case "joint":
-                this.options = { };
+                this.options = {
+                    render: {
+                        strokeStyle: "#858585"
+                    }
+                };
                 break;
             case "spring":
                 this.options = {
-                    stiffness: 0.1
+                    stiffness: 0.05,
+                    render: {
+                        strokeStyle: "#858585"
+                    }
                 }
                 break;
             case "lemon":
@@ -152,7 +168,10 @@ class BodyType {
                     restitution: 0.1,
                     friction: 0.5,
                     frictionStatic: 2,
-                    setDensity: 0.005
+                    setDensity: 0.005,
+                    render: {
+                        fillStyle: "#f9c74f"
+                    }
                 }
                 break;
             default:
@@ -292,19 +311,34 @@ class BodyType {
         body[0].bodyType = this.type;
         return body;
     }
+
+    setFillStyle(fillStyle) {
+        switch (this.type) {
+            case "circle":
+            case "plank":
+            case "box":
+                this.options.render.fillStyle = fillStyle;
+                break;
+
+            default:
+                // Pass, do not change colour for other types
+        }
+    }
 }
 
 var bodyType = BodyType.WHEEL; // Current body type
 var newBody = null; // Body currently under creation
 var newBodyProperties = { };
+//var colours = ["#095C47", "#0759B0", "#8A2E19", "#E88EED"];
+//var colours = ["#A3A3A3"];
 
 // EVENTS
 // Add bodies on mouseclick
-// List of created wheels
-
 // On mousedown: create body at mouse position
 addEventListener("mousedown", (e) => {
     if (!newBody) {
+        //newBodyProperties.colour = colours[Math.floor(Math.random() * colours.length)];
+        //bodyType.setFillStyle(newBodyProperties.colour);
         newBodyProperties.objX = render.mouse.position.x;
         newBodyProperties.objY = render.mouse.position.y;
 
