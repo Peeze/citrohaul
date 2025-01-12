@@ -13,6 +13,7 @@ var Engine = Matter.Engine,
     Body = Matter.Body,
     Bodies = Matter.Bodies,
     Bounds = Matter.Bounds,
+    Events = Matter.Events,
     Vector = Matter.Vector,
     Mouse = Matter.Mouse,
     Query = Matter.Query,
@@ -41,16 +42,50 @@ if (DEBUG_MODE) {
     render.options.showMousePosition = true;
 }
 
+
+// Keep list of wheels
+var wheels = [];
+
 // Dynamic canvas size depending on container size
-function setCanvasBounds(viewHeight) {
-    var viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
+// Follow wheels around
+var viewHeight = 1000;
+var viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
+
+function setCanvasBounds() {
     Render.setSize(render, viewWidth, viewHeight);
-    Bounds.shift(render.bounds, Vector.create(-viewWidth / 2, 0));
+
+    // Average position of wheels
+    if (wheels.length != 0) {
+        var position = Vector.create(0, 0);
+        for (const wheel of wheels) {
+            position = Vector.add(position, wheel.position);
+        }
+        position = Vector.div(position, wheels.length);
+
+        // Substract half canvas width and height to centre view
+        position = Vector.sub(position, Vector.div(Vector.create(viewWidth, viewHeight), 2));
+
+        // Limit view so it does not fall under "ground level"
+        position.y = Math.min(position.y, -viewHeight);
+        Bounds.shift(render.bounds, position);
+    } else {
+        Bounds.shift(render.bounds, Vector.create(0, -viewHeight));
+    }
 }
 
-setCanvasBounds(1000);
+// Calculate view before render
+Events.on(render, "beforeRender", (e) => {
+    setCanvasBounds();
+});
+// Adjust viewWidth when canvas size changes
 addEventListener("resize", (e) => {
-    setCanvasBounds(1000);
+    viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
+});
+// Scroll to change viewHeight
+addEventListener("wheel", (e) => {
+    viewHeight += e.deltaY;
+    viewHeight = Math.max(Math.min(viewHeight, 3000), 300);
+    viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
 });
 
 // Run the ENGINE
@@ -63,29 +98,15 @@ runner.enabled = false;
 Runner.run(runner, engine);
 
 // Populate the WORLD
-// create boxes and a ground
-var boxOptions = {
-    restitution: 0.5,
-    friction: 0.4,
-    frictionStatic: 1.5,
-    frictionAir: 0
-}
-
+// create a ground
 var staticBodyOptions = {
     isStatic: true,
     friction: 1
 }
-
-var ground = Bodies.rectangle(0, 1000, 8000, 80, staticBodyOptions);
-var box1 = Bodies.rectangle(50, 950, 80,80, staticBodyOptions);
-var box3 = Bodies.rectangle(950, 950, 80, 80, staticBodyOptions);
-var box4 = Bodies.rectangle(-350, 950, 80, 80, {...staticBodyOptions, angle: Math.PI / 4 });
+var ground = Bodies.rectangle(0, 0, 10000, 80, staticBodyOptions);
 
 // add all of the bodies to the world
 Composite.add(engine.world, [ground]);
-
-// Keep list of wheels
-var wheels = [];
 
 // Class to contain factory functions for each type of object to be created
 class BodyType {
@@ -115,7 +136,7 @@ class BodyType {
                 this.options = {
                     restitution: 0.3,
                     friction: 0.8,
-                    frictionStatic: 10
+                    frictionStatic: 2
                 }
                 break;
             case "joint":
@@ -130,7 +151,7 @@ class BodyType {
                 this.options = {
                     restitution: 0.1,
                     friction: 0.5,
-                    frictionStatic: 10,
+                    frictionStatic: 2,
                     setDensity: 0.005
                 }
                 break;
@@ -159,7 +180,6 @@ class BodyType {
                 // Return a list containing the wheel and the constraint.
                 if (shiftKey && bodyType.type == "wheel") {
                     body.push(Constraint.create({bodyA: body[0], pointB: Vector.create(objX, objY)}));
-                    console.log(body[1]);
                 }
 
                 break;

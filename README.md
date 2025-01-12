@@ -21,8 +21,9 @@ Draw objects with mouse. Change object type with keys:
 
 Hold `Shift` while drawing an object to make it immovable.
 
-- `ArrowUp` and `ArrowDown`: Spin all wheels
-- `Space`: Start/pause simulation
+- `ArrowUp` and `ArrowDown` to spin all wheels
+- `Space` to start/pause the simulation
+- Scroll to zoom
 
 ## License
 
