@@ -34,6 +34,8 @@ var render = Render.create({
 
 // Modify options directly (setting them upon creation does not work for some reason)
 render.options.hasBounds = true;
+render.options.wireframes = true;
+render.options.background = "#FEF2D8";  // Background color (for later)
 if (DEBUG_MODE) {
     render.options.showAxes = true;
     render.options.showMousePosition = true;
@@ -93,6 +95,7 @@ class BodyType {
     static BOX = new BodyType("box");
     static JOINT = new BodyType("joint");
     static SPRING = new BodyType("spring");
+    static LEMON = new BodyType("lemon");
 
     constructor(type) {
         this.type = type;
@@ -121,6 +124,14 @@ class BodyType {
             case "spring":
                 this.options = {
                     stiffness: 0.1
+                }
+                break;
+            case "lemon":
+                this.options = {
+                    restitution: 0.1,
+                    friction: 0.5,
+                    frictionStatic: 10,
+                    setDensity: 0.005
                 }
                 break;
             default:
@@ -167,9 +178,20 @@ class BodyType {
             case "spring":
                 // Same as joints, with different options
             case "joint":
+                // List of all bodies in the world
                 var bodies = Composite.allBodies(engine.world);
+
+                // Get bodies at end points of constraint
                 var pointA = Vector.create(objX, objY);
-                var bodyA = Query.point(bodies, pointA)[0];
+                var bodyA;
+                // Do not put constraints on lemons (select first non-lemon
+                // from list of objects at point)
+                for (var body of Query.point(bodies, pointA)) {
+                    if (body.bodyType != "lemon") {
+                        bodyA = body;
+                        break;
+                    }
+                }
                 // If body is not null, calculate offset from centre
                 if (bodyA) {
                     pointA = Vector.sub(pointA, bodyA.position);
@@ -180,7 +202,15 @@ class BodyType {
                 }
 
                 var pointB = Vector.create(mouseX, mouseY);
-                var bodyB = Query.point(bodies, pointB)[0];
+                var bodyB;
+                // Do not put constraints on lemons (select first non-lemon
+                // from list of objects at point)
+                for (var body of Query.point(bodies, pointB)) {
+                    if (body.bodyType != "lemon") {
+                        bodyB = body;
+                        break;
+                    }
+                }
                 // If body is not null, calculate offset from centre
                 // For wheels, snap to center if sufficiently close
                 if (bodyB) {
@@ -205,6 +235,15 @@ class BodyType {
                     bodyA: bodyA, bodyB: bodyB,
                     pointA: pointA, pointB: pointB});
                 break;
+
+            case "lemon":
+                var radius = 15;
+                body = Bodies.circle(
+                    mouseX, mouseY,
+                    radius,
+                    {...this.options, ...options});
+                break;
+
             default:
                 console.warn(`Body type "${this.type}" not implemented`);
                 return null;
@@ -340,6 +379,11 @@ addEventListener("keydown", (e) => {
         case "6":
             if (!newBody) {
                 bodyType = BodyType.SPRING;
+            }
+            break;
+        case "7":
+            if (!newBody) {
+                bodyType = BodyType.LEMON;
             }
             break;
 
