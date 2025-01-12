@@ -1,8 +1,10 @@
 # Citrohaul
 
-Silly project inspired by Nitrohaul.
+Silly game about transporting your lemons. Inspired by Nitrohaul.
 
-## Dependencies
+## Installation
+
+Download and open `index.html` with a browser.
 
 Depends on [Matter.js](https://github.com/liabru/matter-js).
 
@@ -15,6 +17,7 @@ Draw objects with mouse. Change object type with keys:
 - `4`: Box
 - `5`: Joint between bodies or fixed points
 - `6`: Spring, a wobblier joint
+- `7`: Lemon, cannot be connected with a joint or spring
 
 Other controls:
 - `ArrowUp` and `ArrowDown`: Spin all wheels
