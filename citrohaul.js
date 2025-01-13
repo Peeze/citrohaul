@@ -1,8 +1,7 @@
 // Silly project inspired by Nitrohaul.
 //
 // TODO:
-// - Add splices (wheels, lemons, grounds, background?)
-// - Disable collisions between objects drawn on top of each other
+// - Add better textures (wheels, lemons, ground)
 // - Perhaps follow the lemons instead of wheels
 //
 // Created by (c) Peeze 2025.
@@ -49,9 +48,10 @@ if (DEBUG_MODE) {
 }
 
 
-// Keep list of wheels
+// Keep list of wheels, lemons, and non-static parts
 var wheels = [];
 var lemons = [];
+var nonStaticParts = [];
 
 // Dynamic canvas size depending on container size
 // Follow wheels around
@@ -160,6 +160,7 @@ class BodyType {
                     restitution: 0.3,
                     friction: 0.8,
                     frictionStatic: 2,
+                    frictionAir: 0.005,
                     render: {
                         fillStyle: "#3E3D3D"
                     }
@@ -264,14 +265,14 @@ class BodyType {
                 // Same as joints, with different options
             case "joint":
                 // List of all bodies in the world
-                var bodies = Composite.allBodies(engine.world);
+                var allBodies = Composite.allBodies(engine.world);
 
                 // Get bodies at end points of constraint
                 var pointA = Vector.create(objX, objY);
                 var bodyA;
                 // Do not put constraints on lemons (select first non-lemon
                 // from list of objects at point)
-                for (var body of Query.point(bodies, pointA)) {
+                for (var body of Query.point(allBodies, pointA)) {
                     if (body.bodyType != "lemon") {
                         bodyA = body;
                         break;
@@ -286,18 +287,19 @@ class BodyType {
                     }
                 }
 
+                // Get bodies at end points of constraint
                 var pointB = Vector.create(mouseX, mouseY);
                 var bodyB;
                 // Do not put constraints on lemons (select first non-lemon
                 // from list of objects at point)
-                for (var body of Query.point(bodies, pointB)) {
-                    if (body.bodyType != "lemon") {
+                // Do not select same body as bodyA
+                for (var body of Query.point(allBodies, pointB)) {
+                    if (body.bodyType != "lemon" && body !== bodyA) {
                         bodyB = body;
                         break;
                     }
                 }
                 // If body is not null, calculate offset from centre
-                // For wheels, snap to center if sufficiently close
                 if (bodyB) {
                     pointB = Vector.sub(pointB, bodyB.position);
                     // For wheels, snap to center if sufficiently close
@@ -310,7 +312,7 @@ class BodyType {
                 // - Both start and end of constraints are not a body
                 // - Start and end are the same body
                 if (options.mouseup && (
-                        (!bodyA && !bodyB)
+                        (!bodyA || !bodyB)
                         || bodyA === bodyB)) {
                     return [];
                 }
@@ -406,13 +408,47 @@ addEventListener("mouseup", (e) => {
             newBodyProperties.objX, newBodyProperties.objY,
             render.mouse.position.x, render.mouse.position.y,
             { mouseup: true, isStatic: shiftKey });
-            Composite.add(engine.world, newBody);
+        Composite.add(engine.world, newBody);
 
-        // Keep list of all wheels
-        if (bodyType === BodyType.WHEEL) {
-            wheels.push(newBody[0]);
-        } else if (bodyType === BodyType.LEMON) {
-            lemons.push(newBody[0]);
+        // newBody could be an empty list if no new body is to be created,
+        // e.g. a joint with no target bodies
+        if (newBody[0]) {
+            // Disable collisions with overlapping non-static bodies
+            if (!newBody[0].isStatic
+                && bodyType !== BodyType.LEMON
+                && bodyType !== BodyType.JOINT
+                && bodyType !== BodyType.SPRING) {
+
+                // Iterate through all collisions
+                var collisions = Query.collides(newBody[0], nonStaticParts.concat(wheels));
+                for (const collision of collisions) {
+                    if (collision.bodyA.bodyType != "wheel") {
+                        collision.bodyA.collisionFilter.mask = -3;
+                    }
+                    if (collision.bodyB.bodyType != "wheel") {
+                        collision.bodyB.collisionFilter.mask = -3;
+                    }
+                    collision.bodyA.collisionFilter.category = 2;
+                    collision.bodyB.collisionFilter.category = 2;
+                }
+            }
+
+            // Keep lists of all wheels, lemons, and non-static parts
+            switch (newBody[0].bodyType) {
+                case "wheel":
+                    wheels.push(newBody[0]);
+                    break;
+                case "lemon":
+                    lemons.push(newBody[0]);
+                    break;
+                case "circle":
+                case "plank":
+                case "box":
+                    if (!newBody[0].isStatic) {
+                        nonStaticParts.push(newBody[0]);
+                    }
+                    break;
+            }
         }
 
         newBody = null;
