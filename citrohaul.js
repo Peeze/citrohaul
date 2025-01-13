@@ -2,14 +2,13 @@
 //
 // TODO:
 // - Add better textures (wheels, lemons, ground)
-// - Perhaps follow the lemons instead of wheels
+// - Add sound design
+// - Make objects draggable and deletable
 //
 // Created by (c) Peeze 2025.
 // Mozilla Public License 2.0
 
 // Set the UP
-var DEBUG_MODE = false;
-
 // module aliases
 var Engine = Matter.Engine,
     Render = Matter.Render,
@@ -37,21 +36,23 @@ var render = Render.create({
     mouse: mouse
 });
 
-// Modify options directly (setting them upon creation does not work for some reason)
+// Modify render options (setting them in the options above does not work for some reason)
 render.options.hasBounds = true;
-render.options.wireframes = false;
-render.options.background = "#FFFFF2";  // Background color (for later)
-if (DEBUG_MODE) {
-    render.options.showAxes = true;
-    render.options.showMousePosition = true;
-    render.options.wireframes = true;
-}
+
+// Options for drawing mode
+render.options.wireframes = true;
+render.options.showAxes = true;
+render.options.wireframeBackground = "#2E3561";
+
+// Options for simulation mode
+render.options.background = "#FFFFF2";
 
 
-// Keep list of wheels, lemons, and non-static parts
+// Keep list of different objects
 var wheels = [];
 var lemons = [];
 var nonStaticParts = [];
+var joints = [];
 
 // Dynamic canvas size depending on container size
 // Follow lemons around
@@ -146,7 +147,6 @@ class BodyType {
                     friction: 0.8,
                     frictionStatic: 10,
                     render: {
-                        fillStyle: "#1F1E1E",
                         sprite: {
                             texture: "img/wheel2_512px.png",
                         }
@@ -169,7 +169,7 @@ class BodyType {
             case "joint":
                 this.options = {
                     render: {
-                        strokeStyle: "#858585"
+                        strokeStyle: runner.enabled ? "#858585" : "#FFFFFF"
                     }
                 };
                 break;
@@ -177,7 +177,7 @@ class BodyType {
                 this.options = {
                     stiffness: 0.05,
                     render: {
-                        strokeStyle: "#858585"
+                        strokeStyle: runner.enabled ? "#858585" : "#FFFFFF"
                     }
                 }
                 break;
@@ -433,7 +433,7 @@ addEventListener("mouseup", (e) => {
                 }
             }
 
-            // Keep lists of all wheels, lemons, and non-static parts
+            // Keep lists of different objects
             switch (newBody[0].bodyType) {
                 case "wheel":
                     wheels.push(newBody[0]);
@@ -447,6 +447,10 @@ addEventListener("mouseup", (e) => {
                     if (!newBody[0].isStatic) {
                         nonStaticParts.push(newBody[0]);
                     }
+                    break;
+                case "joint":
+                case "spring":
+                    joints.push(newBody[0]);
                     break;
             }
         }
@@ -535,9 +539,20 @@ addEventListener("keydown", (e) => {
             shiftKey = true;
             break;
 
-        // Spacebar: pause the engine
+        // Spacebar: toggle drawing/simulation mode
+        // Pause the engine, change colour scheme
         case "Space":
             runner.enabled = !runner.enabled;
+            render.options.wireframes = !render.options.wireframes;
+            render.options.showAxes = !render.options.showAxes;
+
+            // Change colour of joints
+            var strokeStyle = runner.enabled ? "#858585" : "#FFFFFF";
+            BodyType.JOINT.options.render.strokeStyle = strokeStyle;
+            BodyType.SPRING.options.render.strokeStyle = strokeStyle;
+            for (const joint of joints) {
+                joint.render.strokeStyle = strokeStyle;
+            }
             break;
     }
 });
