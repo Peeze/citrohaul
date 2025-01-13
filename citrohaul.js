@@ -54,20 +54,20 @@ var lemons = [];
 var nonStaticParts = [];
 
 // Dynamic canvas size depending on container size
-// Follow wheels around
+// Follow lemons around
 var viewHeight = 1000;
 var viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
 
 function setCanvasBounds() {
     Render.setSize(render, viewWidth, viewHeight);
 
-    // Average position of wheels
-    if (wheels.length != 0) {
+    // Average position of lemons
+    if (lemons.length != 0) {
         var position = Vector.create(0, 0);
-        for (const wheel of wheels) {
-            position = Vector.add(position, wheel.position);
+        for (const lemon of lemons) {
+            position = Vector.add(position, lemon.position);
         }
-        position = Vector.div(position, wheels.length);
+        position = Vector.div(position, lemons.length);
 
         // Substract half canvas width and height to centre view
         position = Vector.sub(position, Vector.div(Vector.create(viewWidth, viewHeight), 2));
@@ -245,7 +245,7 @@ class BodyType {
                 var midY = (objY + mouseY) / 2;
                 var diffX = mouseX - objX;
                 var diffY = mouseY - objY;
-                var angle = (diffX != 0) ? Math.atan(diffY / diffX) : 0;
+                var angle = (diffX != 0) ? Math.atan(diffY / diffX) : Math.PI / 2;
                 var length = Math.sqrt(diffX * diffX + diffY * diffY);
 
                 body = [Bodies.rectangle(
