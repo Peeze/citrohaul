@@ -4,10 +4,12 @@ Silly game about transporting your lemons. Inspired by Nitrohaul.
 
 ## Installation
 
-Download and open `index.html` with a browser.
+Download the repository and open `index.html` with a browser.
 
-Depends on [Matter.js](https://github.com/liabru/matter-js). Place `matter.js`
-in the directory `lib`.
+Depends on [Matter.js](https://github.com/liabru/matter-js). Download
+[matter.js build](https://github.com/liabru/matter-js/tree/master/build) and
+place it in the `citrohaul/lib` directory. If matter.js is not found, it will
+be loaded dynamically from the CDN.
 
 ## Controls
 

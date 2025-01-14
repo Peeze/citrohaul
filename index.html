@@ -6,7 +6,6 @@
  -->
 
 <head>
-    <script src="lib/matter.js"></script>
 <style>
 :root {
     --header-size: 0px;
@@ -57,5 +56,33 @@ div {
         <canvas id="render-canvas"> </canvas>
     </div>
     <div class="footer"></div>
-    <script src="citrohaul.js"></script>
+
+    <script>
+        var body = document.getElementsByTagName('body')[0];
+
+        function loadScript(src, onload, onerror) {
+            var script = document.createElement("script");
+            script.type = "text/javascript";
+            script.src = src;
+
+            if (onload) {
+                script.addEventListener("load", (e) => {
+                    console.log(`Loaded ${src}`);
+                    loadScript(onload, "", "");
+                });
+            }
+            if (onerror) {
+                script.addEventListener("error", (e) => {
+                    loadScript(onerror, onload, "");
+                });
+            }
+
+            body.appendChild(script);
+        }
+
+        loadScript(
+            "lib/matter.js",
+            "citrohaul.js",
+            "https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js");
+    </script>
 </body>
