@@ -21,6 +21,7 @@ Draw objects with the mouse. Change object type by pressing:
 - `5`: Joint between bodies or fixed points
 - `6`: Spring, a wobblier joint
 - `7`: Lemon, handle with care
+- `8`: Drag objects around
 
 Hold `Shift` while drawing an object to make it immovable.
 
