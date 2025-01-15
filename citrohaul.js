@@ -355,6 +355,20 @@ class BodyType {
                         //}
                     }
 
+                    // On doubeclick: delete
+                    if (bodyHit && options.doubleclick) {
+                        // Remove body
+                        Composite.remove(engine.world, bodyHit);
+
+                        // Remove constraints
+                        for (const constraint of joints) {
+                            if (constraint.bodyA === bodyHit || constraint.bodyB === bodyHit) {
+                                Composite.remove(engine.world, constraint);
+                            }
+                        }
+                        return [];
+                    }
+
                     // Save reference to body and offset from mouse in newBodyProperties
                     if (bodyHit) {
                         newBodyProperties.body = bodyHit;
@@ -379,6 +393,7 @@ class BodyType {
                         Body.setStatic(bodyHit, true);
                     }
 
+
                 } else {
                     // Get reference to body
                     var bodyHit = newBodyProperties.body;
@@ -394,6 +409,11 @@ class BodyType {
                     // 3. Adjust constraints
                     for (const constraint of newBodyProperties.constraints) {
                         constraint.length = Constraint.currentLength(constraint);
+                        if (constraint.length != 0) {
+                            constraint.render.type = "line";
+                        } else {
+                            constraint.render.type = "pin";
+                        }
                     }
 
                     // 4. Reinstate "staticness"
@@ -453,7 +473,7 @@ addEventListener("mousedown", (e) => {
         newBody = bodyType.create(
             newBodyProperties.objX, newBodyProperties.objY,
             render.mouse.position.x, render.mouse.position.y,
-            { isStatic: true, mousedown: true });
+            { isStatic: true, mousedown: true, doubleclick: e.detail == 2 });
         Composite.add(engine.world, newBody);
     }
 });
