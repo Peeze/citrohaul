@@ -23,6 +23,24 @@ var Engine = Matter.Engine,
     Composite = Matter.Composite,
     Constraint = Matter.Constraint;
 
+var sprites = {
+    ground: {
+        texture: "img/ground.png",
+        xScale: 0.7,
+        yScale: 0.7,
+        yOffset: 0.5
+
+    },
+    wheel: { texture: "img/wheel.png" },
+    lemon: {
+        texture: "img/lemon.png",
+        xScale: 0.72,
+        yScale: 0.72,
+        xOffset: -0.09,
+        yOffset: 0.12
+    }
+}
+
 // create an engine
 var engine = Engine.create();
 
@@ -112,15 +130,13 @@ var groundOptions = {
     friction: 1,
     render: {
         fillStyle: "#90BE6D",
-        sprite: {
-            texture: "img/ground.png",
-            yOffset: 0.1
-        }
+        sprite: sprites.ground
     }
 }
 var ground = [];
-for (var x = -5000; x < 5000; x += 499) {
-    ground.push(Bodies.rectangle(x, 0, 500, 80, groundOptions));
+var texture_width = 2605;
+for (var x = -5000; x < 5000; x += texture_width) {
+    ground.push(Bodies.rectangle(x, 0, 2605, 80, groundOptions));
 }
 
 // add all of the bodies to the world
@@ -147,9 +163,7 @@ class BodyType {
                     friction: 0.8,
                     frictionStatic: 10,
                     render: {
-                        sprite: {
-                            texture: "img/wheel2_512px.png",
-                        }
+                        sprite: sprites.wheel
                     }
                 }
                 break;
@@ -190,13 +204,7 @@ class BodyType {
                     setDensity: 0.005,
                     render: {
                         fillStyle: "#f9c74f",
-                        sprite: {
-                            texture: "img/lemon2_64px.png",
-                            xScale: 0.65,
-                            yScale: 0.65,
-                            xOffset: -0.1,
-                            yOffset: 0.1
-                        }
+                        sprite: sprites.lemon
                     }
                 }
                 break;
