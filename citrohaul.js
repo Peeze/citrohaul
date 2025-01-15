@@ -23,24 +23,6 @@ var Engine = Matter.Engine,
     Composite = Matter.Composite,
     Constraint = Matter.Constraint;
 
-var sprites = {
-    ground: {
-        texture: "img/ground.png",
-        xScale: 0.7,
-        yScale: 0.7,
-        yOffset: 0.5
-
-    },
-    wheel: { texture: "img/wheel.png" },
-    lemon: {
-        texture: "img/lemon.png",
-        xScale: 0.72,
-        yScale: 0.72,
-        xOffset: -0.09,
-        yOffset: 0.12
-    }
-}
-
 // create an engine
 var engine = Engine.create();
 
@@ -54,6 +36,7 @@ var render = Render.create({
     mouse: mouse
 });
 
+
 // Modify render options (setting them in the options above does not work for some reason)
 render.options.hasBounds = true;
 
@@ -64,6 +47,27 @@ render.options.wireframeBackground = "#2E3561";
 
 // Options for simulation mode
 render.options.background = "#FFFFF2";
+
+var sprites = {
+    ground: {
+        texture: "img/ground.png",
+        xScale: 0.7,
+        yScale: 0.7,
+        yOffset: 0.5
+
+    },
+    wheel: {
+        texture: "img/wheel.png"
+    },
+    lemon: {
+        texture: "img/lemon.png",
+        xScale: 0.72,
+        yScale: 0.72,
+        xOffset: -0.09,
+        yOffset: 0.12
+    }
+}
+
 
 
 // Keep list of different objects
@@ -122,6 +126,8 @@ Render.run(render);
 var runner = Runner.create();
 runner.enabled = false;
 Runner.run(runner, engine);
+
+
 
 // Populate the WORLD
 // create a ground
