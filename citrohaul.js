@@ -3,7 +3,9 @@
 // TODO:
 // - Add better textures (wheels, lemons, ground)
 // - Add sound design
-// - Make objects draggable and deletable
+// - Make objects deletable
+// - Make joints deletable
+// - Make bodies composable of different parts
 //
 // Created by (c) Peeze 2025.
 // Mozilla Public License 2.0
@@ -120,7 +122,9 @@ var groundOptions = {
 }
 var ground = [];
 for (var x = -5000; x < 5000; x += 499) {
-    ground.push(Bodies.rectangle(x, 0, 500, 80, groundOptions));
+    var groundElement = Bodies.rectangle(x, 0, 500, 80, groundOptions);
+    groundElement.bodyType = "ground";
+    ground.push(groundElement);
 }
 
 // add all of the bodies to the world
@@ -135,6 +139,7 @@ class BodyType {
     static JOINT = new BodyType("joint");
     static SPRING = new BodyType("spring");
     static LEMON = new BodyType("lemon");
+    static DRAG = new BodyType("drag");
 
     constructor(type) {
         this.type = type;
@@ -146,6 +151,7 @@ class BodyType {
                     restitution: 0.3,
                     friction: 0.8,
                     frictionStatic: 10,
+                    frictionAir: 0.0005,
                     render: {
                         sprite: {
                             texture: "img/wheel2_512px.png",
@@ -160,7 +166,7 @@ class BodyType {
                     restitution: 0.3,
                     friction: 0.8,
                     frictionStatic: 2,
-                    frictionAir: 0.005,
+                    frictionAir: 0.0005,
                     render: {
                         fillStyle: "#3E3D3D"
                     }
@@ -186,7 +192,7 @@ class BodyType {
                     restitution: 0.1,
                     friction: 0.5,
                     frictionStatic: 2,
-                    frictionAir: 0.01,
+                    frictionAir: 0.0005,
                     setDensity: 0.005,
                     render: {
                         fillStyle: "#f9c74f",
@@ -333,6 +339,96 @@ class BodyType {
                     {...this.options, ...options, isStatic: !options.mouseup})];
                 break;
 
+            case "drag":
+                // 1. Get body under mouse
+                if (options.mousedown) {
+                    // List of all bodies in the world
+                    var allBodies = Composite.allBodies(engine.world);
+
+                    // Get bodies at end points of constraint
+                    var point = Vector.create(mouseX, mouseY);
+                    var bodyHit;
+                    // Do not drag or delete ground
+                    for (var body of Query.point(allBodies, point)) {
+                        if (body.bodyType != "ground") {
+                            bodyHit = body;
+                            break;
+                        }
+                    }
+
+                    // On doubeclick: delete
+                    if (bodyHit && options.doubleclick) {
+                        // Remove body
+                        Composite.remove(engine.world, bodyHit);
+
+                        // Remove constraints
+                        for (const constraint of joints) {
+                            if (constraint.bodyA === bodyHit || constraint.bodyB === bodyHit) {
+                                Composite.remove(engine.world, constraint);
+                            }
+                        }
+                        return [];
+                    }
+
+                    // Save reference to body and offset from mouse in newBodyProperties
+                    if (bodyHit) {
+                        newBodyProperties.body = bodyHit;
+                        // Offset of object position from mouse
+                        newBodyProperties.offsetX = bodyHit.position.x - mouseX;
+                        newBodyProperties.offsetY = bodyHit.position.y - mouseY;
+
+                        // "Staticness", reinstate on mouseup
+                        newBodyProperties.isStatic = bodyHit.isStatic;
+
+                        // List of constraints
+                        newBodyProperties.constraints = [];
+                        for (const constraint of joints) {
+                            // Only fixed joints, not springs
+                            if (constraint.bodyType == "joint"
+                                && (constraint.bodyA === bodyHit || constraint.bodyB === bodyHit)) {
+                                newBodyProperties.constraints.push(constraint);
+                            }
+                        }
+
+                        // Make static while being moved
+                        Body.setStatic(bodyHit, true);
+                    }
+
+
+                } else {
+                    // Get reference to body
+                    var bodyHit = newBodyProperties.body;
+                }
+
+                if (bodyHit) {
+                    // 2. Set position
+                    var newPosition = Vector.create(
+                        mouseX + newBodyProperties.offsetX,
+                        mouseY + newBodyProperties.offsetY);
+                    Body.setPosition(bodyHit, newPosition);
+
+                    // 3. Adjust constraints
+                    for (const constraint of newBodyProperties.constraints) {
+                        constraint.length = Constraint.currentLength(constraint);
+                        if (constraint.length != 0) {
+                            constraint.render.type = "line";
+                            constraint.render.anchors = true;
+                        } else {
+                            constraint.render.type = "pin";
+                            constraint.render.anchors = false;
+                        }
+                    }
+
+                    // 4. Reinstate "staticness"
+                    if (options.mouseup) {
+                        // On mouseup, reinstate static property
+                        Body.setStatic(bodyHit, newBodyProperties.isStatic);
+                    }
+                }
+
+                // Return no new object to be created
+                return [];
+
             default:
                 console.warn(`Body type "${this.type}" not implemented`);
                 return null;
@@ -369,16 +465,18 @@ var newBodyProperties = { };
 // Add bodies on mouseclick
 // On mousedown: create body at mouse position
 addEventListener("mousedown", (e) => {
-    if (!newBody) {
+    if (e.which == 1 && !newBody) {
+        // For randomising the colour of an object (currently disabled)
         //newBodyProperties.colour = colours[Math.floor(Math.random() * colours.length)];
         //bodyType.setFillStyle(newBodyProperties.colour);
+
         newBodyProperties.objX = render.mouse.position.x;
         newBodyProperties.objY = render.mouse.position.y;
 
         newBody = bodyType.create(
             newBodyProperties.objX, newBodyProperties.objY,
             render.mouse.position.x, render.mouse.position.y,
-            { isStatic: true });
+            { isStatic: true, mousedown: true, doubleclick: e.detail == 2 });
         Composite.add(engine.world, newBody);
     }
 });
@@ -398,7 +496,9 @@ addEventListener("mousemove", (e) => {
 // On mouseup: release newBody
 addEventListener("mouseup", (e) => {
     if (newBody) {
-        //Body.setStatic(newBody, true);  // setStatic bugs, objects vanish, create a new body instead
+        //Body.setStatic(newBody, true);
+        // setStatic does not work for objects that were created static, they
+        // vanish, create a new body instead
 
         Composite.remove(engine.world, newBody);
 
@@ -456,6 +556,7 @@ addEventListener("mouseup", (e) => {
         }
 
         newBody = null;
+        newBodyProperties = { };
     }
 });
 
@@ -530,6 +631,11 @@ addEventListener("keydown", (e) => {
         case "Digit7":
             if (!newBody) {
                 bodyType = BodyType.LEMON;
+            }
+            break;
+        case "Digit8":
+            if (!newBody) {
+                bodyType = BodyType.DRAG;
             }
             break;
 
