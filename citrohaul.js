@@ -122,7 +122,9 @@ var groundOptions = {
 }
 var ground = [];
 for (var x = -5000; x < 5000; x += 499) {
-    ground.push(Bodies.rectangle(x, 0, 500, 80, groundOptions));
+    var groundElement = Bodies.rectangle(x, 0, 500, 80, groundOptions);
+    groundElement.bodyType = "ground";
+    ground.push(groundElement);
 }
 
 // add all of the bodies to the world
@@ -346,13 +348,12 @@ class BodyType {
                     // Get bodies at end points of constraint
                     var point = Vector.create(mouseX, mouseY);
                     var bodyHit;
-                    // Do not put constraints on lemons (select first non-lemon
-                    // from list of objects at point)
+                    // Do not drag or delete ground
                     for (var body of Query.point(allBodies, point)) {
-                        //if (body.bodyType != "lemon") {
+                        if (body.bodyType != "ground") {
                             bodyHit = body;
                             break;
-                        //}
+                        }
                     }
 
                     // On doubeclick: delete
@@ -411,8 +412,10 @@ class BodyType {
                         constraint.length = Constraint.currentLength(constraint);
                         if (constraint.length != 0) {
                             constraint.render.type = "line";
+                            constraint.render.anchors = true;
                         } else {
                             constraint.render.type = "pin";
+                            constraint.render.anchors = false;
                         }
                     }
 
