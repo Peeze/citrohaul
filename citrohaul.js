@@ -1,6 +1,7 @@
 // Silly project inspired by Nitrohaul.
 //
 // TODO:
+// - Rewrite renderer
 // - Add better textures (wheels, lemons, ground)
 // - Add sound design
 // - Make objects draggable and deletable
@@ -46,7 +47,8 @@ render.options.showAxes = true;
 render.options.wireframeBackground = "#2E3561";
 
 // Options for simulation mode
-render.options.background = "#FFFFF2";
+//render.options.background = "#FFFFF2";
+render.options.background = "transparent";
 
 var sprites = {
     ground: {
@@ -65,6 +67,9 @@ var sprites = {
         yScale: 0.72,
         xOffset: -0.09,
         yOffset: 0.12
+    },
+    background: {
+        texture: "img/background.png"
     }
 }
 
@@ -103,8 +108,17 @@ function setCanvasBounds() {
     }
 }
 
-// Calculate view before render
+// Background image
+var backgroundImage = new Image(); //document.createElement("img");
+backgroundImage.src = sprites.background.texture;
+var ctx = canvas.getContext("2d");
+
 Events.on(render, "beforeRender", (e) => {
+    // Add background image
+    // Matter.Render clears the context before rendering, so this does not work
+    //ctx.drawImage(backgroundImage, 0, 0);
+
+    // Calculate view before render
     setCanvasBounds();
 });
 // Adjust viewWidth when canvas size changes
