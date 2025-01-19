@@ -3,9 +3,8 @@
 // TODO:
 // - Add better textures (wheels, lemons, ground)
 // - Add sound design
-// - Make objects deletable
-// - Make joints deletable
 // - Make bodies composable of different parts
+// - Refactor BodyType class
 //
 // Created by (c) Peeze 2025.
 // Mozilla Public License 2.0
@@ -567,13 +566,12 @@ var maxVelocity = 0.5;
 
 // Add to angular velocity
 function turnWheel(wheel, torque, responsiveness, maxVelocity, direction) {
-    var angularVelocity = (
-        Body.getAngularVelocity(wheel)
-        + direction * torque / (wheel.mass + responsiveness));
-    // Limit max speed
-    // TODO: Max speed should not be limited when rolling down hill
-    angularVelocity = Math.min(angularVelocity, maxVelocity);
-    angularVelocity = Math.max(angularVelocity, -maxVelocity);
+    var angularVelocity = Body.getAngularVelocity(wheel);
+    // Only apply torque up to maxVelocity
+    if (direction * angularVelocity < maxVelocity) {
+        angularVelocity += direction * torque / (wheel.mass + responsiveness);
+        angularVelocity = direction * Math.min(direction * angularVelocity, maxVelocity);
+    }
     Body.setAngularVelocity(wheel, angularVelocity);
 }
 
