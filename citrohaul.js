@@ -62,17 +62,25 @@ var sprites = {
         texture: "img/wheel.png"
     },
     lemon: {
-        texture: "img/lemon.png",
-        xScale: 0.72,
-        yScale: 0.72,
-        xOffset: -0.09,
-        yOffset: 0.12
+        texture: "img/lemon2.png",
+        xScale: 0.6875,
+        yScale: 0.6875,
+        xOffset: -0.05,
+        yOffset: 0.13
     },
     background: {
         texture: "img/background.png"
     }
 }
 
+// Audio files
+var audio = {
+    carFinish: new Audio("snd/car_finish_1.mp3"),
+    dragWood: new Audio("snd/drag_wood_11.mp3"),
+    ambienceSimulation: new Audio("snd/ambience_summer.mp3")
+};
+
+audio.ambienceSimulation.loop = true;
 
 
 // Keep list of different objects
@@ -420,6 +428,16 @@ addEventListener("mousemove", (e) => {
             render.mouse.position.x, render.mouse.position.y,
             { isStatic: true });
         Composite.add(engine.world, newBody);
+
+        // Play sound
+        // TODO: Refactor, put in a separate function
+        var newAudio = audio.dragWood.cloneNode();
+        newAudio.volume = 0.3;
+        // Experiment with higher pitch for faster movements
+        /*newAudio.preservesPitch = false;
+        newAudio.playbackRate = Math.log10(e.movementX * e.movementX + e.movementY * e.movementY + 1);
+        console.log(newAudio.playbackRate);*/
+        newAudio.play();
     }
 });
 
@@ -573,6 +591,16 @@ addEventListener("keydown", (e) => {
             runner.enabled = !runner.enabled;
             render.options.wireframes = !render.options.wireframes;
             render.options.showAxes = !render.options.showAxes;
+
+            // Play audio
+            // TODO: Refactor, put in a separate function
+            if (runner.enabled) {
+                audio.carFinish.currentTime = 0;
+                audio.carFinish.play();
+                audio.ambienceSimulation.play();
+            } else {
+                audio.ambienceSimulation.pause();
+            }
 
             // Change colour of joints
             var strokeStyle = runner.enabled ? "#858585" : "#FFFFFF";
