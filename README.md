@@ -33,4 +33,4 @@ Hold `Shift` while drawing an object to make it immovable.
 The code is released under Mozilla Public License 2.0.
 (c) [Peeze](https://www.github.com/Peeze) 2025
 
-Visual artwork (c) [@fitz.comic](https://www.instagram.com/fitz.comic) 2025
+Visual artwork and sounds (c) [@fitz.comic](https://www.instagram.com/fitz.comic) 2025
