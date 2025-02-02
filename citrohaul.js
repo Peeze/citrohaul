@@ -4,6 +4,7 @@
 // - Add better textures (wheels, lemons, ground)
 // - Add sound design
 // - Handle collisions: Make bodies composable of different parts
+// - Save/load creations
 //
 // Created by (c) Peeze 2025.
 // Mozilla Public License 2.0
@@ -93,6 +94,7 @@ Events.on(render, "beforeRender", (e) => {
 // Adjust viewWidth when canvas size changes
 addEventListener("resize", (e) => {
     viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
+    Render.setSize(render, viewWidth, viewHeight);
 });
 // Scroll to change viewHeight
 addEventListener("wheel", (e) => {
@@ -762,13 +764,11 @@ let DRAG = {
                 this.currentAction.body = body;
 
                 // Get list of attached constraints
-                this.currentAction.constraints = [];
-                for (const constraint of constraints) {
-                    if (constraint.bodyA === this.currentAction.body
-                        || constraint.bodyB === this.currentAction.body) {
-                        this.currentAction.constraints.push(constraint);
-                    }
-                }
+                this.currentAction.constraints = constraints.filter((constraint) =>
+                    constraint.bodyA === this.currentAction.body
+                    || constraint.bodyB === this.currentAction.body
+                );
+
                 break;
             }
         }
@@ -782,11 +782,25 @@ let DRAG = {
         } else if (event.detail == 2) {
             // Remove body
             Composite.remove(engine.world, this.currentAction.body);
+            // Remove from lists
+            switch (this.currentAction.body.bodyType) {
+                case "wheel":
+                    wheels = wheels.filter((other) => other !== this.currentAction.body);
+                    break;
+                case "lemon":
+                    lemons = lemons.filter((other) => other !== this.currentAction.body);
+                    break;
+            }
 
             // Remove constraints
             for (const constraint of this.currentAction.constraints) {
                 Composite.remove(engine.world, constraint);
+                // Remove from list
+                constraints = constraints.filter((other) => other !== constraint);
             }
+
+            // Reset mouse action
+            this.currentAction = { };
             this.inProgress = false;
 
         } else {
