@@ -3,7 +3,6 @@
 // TODO:
 // - Add better textures (wheels, lemons, ground)
 // - Add sound design
-// - Handle collisions: Make bodies composable of different parts
 // - Save/load creations
 //
 // Created by (c) Peeze 2025.
@@ -81,7 +80,7 @@ function setCanvasBounds() {
         position.y = Math.min(position.y, -viewHeight);
         Bounds.shift(render.bounds, position);
     } else {
-        Bounds.shift(render.bounds, Vector.create(0, -viewHeight));
+        Bounds.shift(render.bounds, Vector.create(-viewWidth / 2, -viewHeight));
     }
 }
 
@@ -92,15 +91,19 @@ Events.on(render, "beforeRender", (e) => {
     }
 });
 // Adjust viewWidth when canvas size changes
+// TODO: Prevent that view window resets to starting position
 addEventListener("resize", (e) => {
     viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
     Render.setSize(render, viewWidth, viewHeight);
+    Bounds.shift(render.bounds, Vector.create(-viewWidth / 2, -viewHeight));
 });
 // Scroll to change viewHeight
 addEventListener("wheel", (e) => {
     viewHeight += e.deltaY;
     viewHeight = Math.max(Math.min(viewHeight, 3000), 300);
     viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
+    Render.setSize(render, viewWidth, viewHeight);
+    Bounds.shift(render.bounds, Vector.create(-viewWidth / 2, -viewHeight));
 });
 
 // Run the ENGINE
@@ -259,6 +262,86 @@ function getRandomColour() {
     return colours[Math.floor(Math.random() * colours.length)];
 }
 
+// Handling collisions: merge overlapping bodies into one
+// Returns original body if no collisions are found. Otherwise, returns a new
+// body with all colliding bodies as parts.
+// World should not contain bodies that are compound bodies themselves.
+function mergeCollidingParts(body, world) {
+    // Get list of collisions, excluding of body with itself
+    var collisions = Query.collides(body, world.filter((b) => b !== body));
+    if (collisions.length == 0) {
+        return body;
+    } else {
+        // Get all other bodies from collisions
+        var collidingParts = collisions.map((collision) =>
+            (collision.bodyA !== body)
+            ? collision.bodyA : collision.bodyB);
+
+        // If colliding bodies are part of compound bodies, get parent bodies
+        // and remove them. Add their parts to the new compound body. Add their
+        // constraints to a random part (will be attached to new parent body
+        // at the end).
+        var additionalParts = [];
+        var collidingParents = [];
+        for (const part of collidingParts) {
+            if (part.parent !== part) {
+                // Keep list of parent bodies, avoid duplicates
+                if (collidingParents.indexOf(part.parent) < 0) {
+                    collidingParents.push(part.parent);
+
+                    // Get parts of parent bodies
+                    additionalParts.push(...part.parent.parts.slice(1));
+                }
+            }
+        }
+
+        // Get constraints on all component bodies or their parents
+        var collidingConstraintsA = [];
+        var collidingConstraintsB = [];
+        for (const constraint of constraints) {
+            if (collidingParts.indexOf(constraint.bodyA) >= 0
+                || collidingParents.indexOf(constraint.bodyA) >= 0) {
+                collidingConstraintsA.push(constraint);
+            }
+            if (collidingParts.indexOf(constraint.bodyB) >= 0
+                || collidingParents.indexOf(constraint.bodyB) >= 0) {
+                collidingConstraintsB.push(constraint);
+            }
+        }
+
+        collidingParts.push(...additionalParts);
+        collidingParts.unshift(body);
+
+        // Remove duplicates
+        // Set maintains insertion order, body will be first item
+        collidingParts = [...new Set(collidingParts)];
+
+        // Add new body to colliding parts, will become parts of overall body
+        var parentBody = Body.create({ parts: collidingParts });
+
+        // Attach constraints to new parent body
+        // Calculate new offset (Constraints can go crazy for complex bodies,
+        // possibly an issue with Matter.js)
+        for (const constraint of collidingConstraintsA) {
+            constraint.pointA = Vector.add(constraint.pointA,
+                Vector.sub(constraint.bodyA.position, parentBody.position));
+            constraint.bodyA = parentBody;
+        }
+        for (const constraint of collidingConstraintsB) {
+            constraint.pointB = Vector.add(constraint.pointB,
+                Vector.sub(constraint.bodyB.position, parentBody.position));
+            constraint.bodyB = parentBody;
+        }
+
+        // Remove colliding parts from world
+        Composite.remove(engine.world, collidingParts);
+        // Remove parent bodies of component bodies
+        Composite.remove(engine.world, collidingParents);
+
+        return parentBody;
+    }
+}
+
 // Digit2: Circle
 let NEW_CIRCLE = {
     bodyType: "circle",
@@ -327,6 +410,13 @@ let NEW_CIRCLE = {
                 this.sides, this.currentAction.radius,
                 {...this.matterOptions, isStatic: event.shiftKey}
             );
+            if (!event.shiftKey) {
+                nonStaticParts.push(this.currentAction.body);
+            }
+
+            // Check for overlaps with other non-static parts. If found, create
+            // body of multiple parts.
+            this.currentAction.body = mergeCollidingParts(this.currentAction.body, nonStaticParts);
 
             // Add to world
             this.currentAction.body.bodyType = this.bodyType;
@@ -426,6 +516,13 @@ let NEW_PLANK = {
                 render.mouse.position.x, render.mouse.position.y,
                 this.width, {...this.matterOptions, isStatic: event.shiftKey}
             );
+            if (!event.shiftKey) {
+                nonStaticParts.push(this.currentAction.body);
+            }
+
+            // Check for overlaps with other non-static parts. If found, create
+            // body of multiple parts.
+            this.currentAction.body = mergeCollidingParts(this.currentAction.body, nonStaticParts);
 
             // Add to world
             this.currentAction.body.bodyType = this.bodyType;
@@ -522,6 +619,13 @@ let NEW_BOX = {
             this.currentAction.body = Bodies.rectangle(
                 ...dimensions, {...this.matterOptions, isStatic: event.shiftKey}
             );
+            if (!event.shiftKey) {
+                nonStaticParts.push(this.currentAction.body);
+            }
+
+            // Check for overlaps with other non-static parts. If found, create
+            // body of multiple parts.
+            this.currentAction.body = mergeCollidingParts(this.currentAction.body, nonStaticParts);
 
             // Add to world
             this.currentAction.body.bodyType = this.bodyType;
@@ -785,10 +889,18 @@ let DRAG = {
             // Remove from lists
             switch (this.currentAction.body.bodyType) {
                 case "wheel":
-                    wheels = wheels.filter((other) => other !== this.currentAction.body);
+                    wheels = wheels.filter(
+                        (other) => this.currentAction.body.parts.indexOf(other) < 0);
+                    break;
+                case "circle":
+                case "plank":
+                case "box":
+                    nonStaticParts = nonStaticParts.filter(
+                        (other) => this.currentAction.body.parts.indexOf(other) < 0);
                     break;
                 case "lemon":
-                    lemons = lemons.filter((other) => other !== this.currentAction.body);
+                    lemons = lemons.filter(
+                        (other) => this.currentAction.body.parts.indexOf(other) < 0);
                     break;
             }
 
