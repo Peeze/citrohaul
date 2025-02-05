@@ -135,7 +135,7 @@ var groundOptions = {
 var ground = [];
 for (var x = -5000; x < 5000; x += 499) {
     var groundElement = Bodies.rectangle(x, 0, 500, 80, groundOptions);
-    groundElement.bodyType = "ground";
+    groundElement.label = "ground";
     ground.push(groundElement);
 }
 
@@ -152,6 +152,7 @@ Bodies.wheel = function(x, y, radius, options) {
     var sides = 24;
     var spriteScale = radius / 256;
     var defaultOptions = {
+        label: "wheel",
         angle: 0.01,
         restitution: 0.3,
         friction: 0.8,
@@ -171,7 +172,7 @@ Bodies.wheel = function(x, y, radius, options) {
 // Mouse actions
 // Digit1: wheels
 let NEW_WHEEL = {
-    bodyType: "wheel",
+    //label: "wheel",
     minRadius: 20,
 
     inProgress: false,
@@ -230,7 +231,6 @@ let NEW_WHEEL = {
             );
 
             // Add to world
-            this.currentAction.body.bodyType = this.bodyType;
             Composite.add(engine.world, this.currentAction.body);
             wheels.push(this.currentAction.body);
 
@@ -239,9 +239,9 @@ let NEW_WHEEL = {
             // Return a list containing the wheel and the constraint.
             if (event.shiftKey) {
                 this.currentAction.constraint = Constraint.create(
-                    {bodyA: this.currentAction.body, pointB: this.currentAction.position});
+                    {bodyA: this.currentAction.body, pointB: this.currentAction.position,
+                     label: "pin"});
                 Composite.add(engine.world, this.currentAction.constraint);
-                this.currentAction.constraint.bodyType = "joint";
                 constraints.push(this.currentAction.constraint);
             }
 
@@ -267,15 +267,19 @@ function getRandomColour() {
 // body with all colliding bodies as parts.
 // World should not contain bodies that are compound bodies themselves.
 function mergeCollidingParts(body, world) {
-    // Get list of collisions, excluding of body with itself
-    var collisions = Query.collides(body, world.filter((b) => b !== body));
+    // Get list of collisions, including of body with itself
+    var collisions = Query.collides(body, world);
+
+    // Return body if no collisions or only one self-collision
     if (collisions.length == 0) {
+        return body;
+    } else if (collisions.length == 1 && collisions[0].bodyA === collisions[0].bodyB) {
         return body;
     } else {
         // Get all other bodies from collisions
         var collidingParts = collisions.map((collision) =>
-            (collision.bodyA !== body)
-            ? collision.bodyA : collision.bodyB);
+            (collision.bodyA === body)
+            ? collision.bodyB : collision.bodyA);
 
         // If colliding bodies are part of compound bodies, get parent bodies
         // and remove them. Add their parts to the new compound body. Add their
@@ -310,7 +314,6 @@ function mergeCollidingParts(body, world) {
         }
 
         collidingParts.push(...additionalParts);
-        collidingParts.unshift(body);
 
         // Remove duplicates
         // Set maintains insertion order, body will be first item
@@ -323,14 +326,31 @@ function mergeCollidingParts(body, world) {
         // Calculate new offset (Constraints can go crazy for complex bodies,
         // possibly an issue with Matter.js)
         for (const constraint of collidingConstraintsA) {
-            constraint.pointA = Vector.add(constraint.pointA,
-                Vector.sub(constraint.bodyA.position, parentBody.position));
-            constraint.bodyA = parentBody;
+            var parentConstraint = Constraint.create(
+                {bodyA: parentBody, bodyB: constraint.bodyB,
+                 pointA: Vector.add(constraint.pointA, Vector.sub(constraint.bodyA.position, parentBody.position)),
+                 pointB: constraint.pointB});
+
+            // Replace constraint in world
+            Composite.remove(engine.world, constraint);
+            Composite.add(engine.world, parentConstraint);
+
+            // Replace constraint in list
+            constraints[constraints.indexOf(constraint)] = parentConstraint;
         }
         for (const constraint of collidingConstraintsB) {
-            constraint.pointB = Vector.add(constraint.pointB,
-                Vector.sub(constraint.bodyB.position, parentBody.position));
-            constraint.bodyB = parentBody;
+            var parentConstraint = Constraint.create(
+                {bodyA: constraint.bodyA, bodyB: parentBody,
+                 pointA: constraint.pointA,
+                 pointB: Vector.add(constraint.pointB, Vector.sub(constraint.bodyB.position, parentBody.position))
+                });
+
+            // Replace constraint in world
+            Composite.remove(engine.world, constraint);
+            Composite.add(engine.world, parentConstraint);
+
+            // Replace constraint in list
+            constraints[constraints.indexOf(constraint)] = parentConstraint;
         }
 
         // Remove colliding parts from world
@@ -344,11 +364,11 @@ function mergeCollidingParts(body, world) {
 
 // Digit2: Circle
 let NEW_CIRCLE = {
-    bodyType: "circle",
     minRadius: 20,
     sides: 24,
 
     matterOptions: {
+        label: "circle",
         restitution: 0.3,
         friction: 0.8,
         frictionStatic: 2,
@@ -419,7 +439,6 @@ let NEW_CIRCLE = {
             this.currentAction.body = mergeCollidingParts(this.currentAction.body, nonStaticParts);
 
             // Add to world
-            this.currentAction.body.bodyType = this.bodyType;
             Composite.add(engine.world, this.currentAction.body);
 
             // Reset currentAction
@@ -444,10 +463,10 @@ Bodies.plank = function(startX, startY, endX, endY, width, options) {
 
 // Digit3: Plank
 let NEW_PLANK = {
-    bodyType: "plank",
     width: 20,
 
     matterOptions: {
+        label: "plank",
         restitution: 0.3,
         friction: 0.8,
         frictionStatic: 2,
@@ -525,7 +544,6 @@ let NEW_PLANK = {
             this.currentAction.body = mergeCollidingParts(this.currentAction.body, nonStaticParts);
 
             // Add to world
-            this.currentAction.body.bodyType = this.bodyType;
             Composite.add(engine.world, this.currentAction.body);
 
             // Reset currentAction
@@ -537,10 +555,10 @@ let NEW_PLANK = {
 
 // Digit4: Box
 let NEW_BOX = {
-    bodyType: "box",
     minWidth: 20,
 
     matterOptions: {
+        label: "box",
         restitution: 0.3,
         friction: 0.8,
         frictionStatic: 2,
@@ -628,7 +646,6 @@ let NEW_BOX = {
             this.currentAction.body = mergeCollidingParts(this.currentAction.body, nonStaticParts);
 
             // Add to world
-            this.currentAction.body.bodyType = this.bodyType;
             Composite.add(engine.world, this.currentAction.body);
 
             // Reset currentAction
@@ -640,9 +657,8 @@ let NEW_BOX = {
 
 // Digit5: Joint
 let NEW_JOINT = {
-    bodyType: "joint",
-
     matterOptions: {
+        label: "joint",
         render: {
             strokeStyle: runner.enabled ? "#858585" : "#FFFFFF"
         }
@@ -698,7 +714,7 @@ let NEW_JOINT = {
             // Do not put constraints on lemons (select first non-lemon
             // from list of objects at point)
             for (var body of Query.point(allBodies, pointA)) {
-                if (body.bodyType != "lemon") {
+                if (body.label != "lemon") {
                     bodyA = body;
                     break;
                 }
@@ -719,7 +735,7 @@ let NEW_JOINT = {
             // from list of objects at point)
             // Do not select same body as bodyA
             for (var body of Query.point(allBodies, pointB)) {
-                if (body.bodyType != "lemon" && body !== bodyA) {
+                if (body.label != "lemon" && body !== bodyA) {
                     bodyB = body;
                     break;
                 }
@@ -740,7 +756,7 @@ let NEW_JOINT = {
                 this.currentAction.constraint = Constraint.create({...this.matterOptions,
                     bodyA: bodyA, bodyB: bodyB,
                     pointA: pointA, pointB: pointB});
-                this.currentAction.constraint.bodyType = this.bodyType;
+                this.currentAction.constraint.label = this.label;
                 Composite.add(engine.world, this.currentAction.constraint);
                 constraints.push(this.currentAction.constraint);
             }
@@ -755,8 +771,8 @@ let NEW_JOINT = {
 // Digit6: Spring
 let NEW_SPRING = {
     ...NEW_JOINT,
-    bodyType: "spring",
     matterOptions: {
+        label: "spring",
         stiffness: 0.03,
         render: {
             strokeStyle: runner.enabled ? "#858585" : "#FFFFFF"
@@ -766,11 +782,11 @@ let NEW_SPRING = {
 
 // Digit7: Lemon
 let NEW_LEMON = {
-    bodyType: "lemon",
     radius: 16,
     sides: 24,
 
     matterOptions: {
+        label: "lemon",
         restitution: 0.1,
         friction: 0.5,
         frictionStatic: 2,
@@ -836,7 +852,6 @@ let NEW_LEMON = {
             );
 
             // Add to world
-            this.currentAction.body.bodyType = this.bodyType;
             Composite.add(engine.world, this.currentAction.body);
             lemons.push(this.currentAction.body);
 
@@ -864,7 +879,7 @@ let DRAG = {
         var point = render.mouse.position;
         for (var body of Query.point(allBodies, point)) {
             // Do not drag or delete ground
-            if (body.bodyType != "ground") {
+            if (body.label != "ground") {
                 this.currentAction.body = body;
 
                 // Get list of attached constraints
@@ -887,7 +902,7 @@ let DRAG = {
             // Remove body
             Composite.remove(engine.world, this.currentAction.body);
             // Remove from lists
-            switch (this.currentAction.body.bodyType) {
+            switch (this.currentAction.body.label) {
                 case "wheel":
                     wheels = wheels.filter(
                         (other) => this.currentAction.body.parts.indexOf(other) < 0);
@@ -939,18 +954,22 @@ let DRAG = {
     // Reinstate former staticness
     mouseup: function(event, engine, render) {
         if (this.inProgress) {
-            // Adjust constraints
-            for (const constraint of this.currentAction.constraints) {
-                // Only adjust length of joints
-                // Do not adjust springs, they stretch
-                if (constraint.bodyType == "joint") {
-                    constraint.length = Constraint.currentLength(constraint);
+            // If in drawing mode: Adjust length of constraints
+            if (!runner.enabled) {
+                for (const constraint of this.currentAction.constraints) {
                     if (constraint.length != 0) {
-                        constraint.render.type = "line";
-                        constraint.render.anchors = true;
+                        // Only adjust constraints of non-zero length, no pins
+                        constraint.length = Constraint.currentLength(constraint);
                     } else {
-                        constraint.render.type = "pin";
-                        constraint.render.anchors = false;
+                        console.log(constraint);
+                        // For pins to the world, move the fixed point along
+                        // with the constrained body
+                        if (constraint.bodyA == null) {
+                            constraint.pointA = Constraint.pointBWorld(constraint);
+                        }
+                        if (constraint.bodyB == null) {
+                            constraint.pointB = Constraint.pointAWorld(constraint);
+                        }
                     }
                 }
             }
