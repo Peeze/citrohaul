@@ -320,37 +320,20 @@ function mergeCollidingParts(body, world) {
         collidingParts = [...new Set(collidingParts)];
 
         // Add new body to colliding parts, will become parts of overall body
-        var parentBody = Body.create({ parts: collidingParts });
+        var parentBody = Body.create({ label: "compound", parts: collidingParts });
 
         // Attach constraints to new parent body
         // Calculate new offset (Constraints can go crazy for complex bodies,
         // possibly an issue with Matter.js)
         for (const constraint of collidingConstraintsA) {
-            var parentConstraint = Constraint.create(
-                {bodyA: parentBody, bodyB: constraint.bodyB,
-                 pointA: Vector.add(constraint.pointA, Vector.sub(constraint.bodyA.position, parentBody.position)),
-                 pointB: constraint.pointB});
-
-            // Replace constraint in world
-            Composite.remove(engine.world, constraint);
-            Composite.add(engine.world, parentConstraint);
-
-            // Replace constraint in list
-            constraints[constraints.indexOf(constraint)] = parentConstraint;
+            constraint.pointA.x = constraint.pointA.x + constraint.bodyA.position.x - parentBody.position.x;
+            constraint.pointA.y = constraint.pointA.y + constraint.bodyA.position.y - parentBody.position.y;
+            constraint.bodyA = parentBody;
         }
         for (const constraint of collidingConstraintsB) {
-            var parentConstraint = Constraint.create(
-                {bodyA: constraint.bodyA, bodyB: parentBody,
-                 pointA: constraint.pointA,
-                 pointB: Vector.add(constraint.pointB, Vector.sub(constraint.bodyB.position, parentBody.position))
-                });
-
-            // Replace constraint in world
-            Composite.remove(engine.world, constraint);
-            Composite.add(engine.world, parentConstraint);
-
-            // Replace constraint in list
-            constraints[constraints.indexOf(constraint)] = parentConstraint;
+            constraint.pointB.x = constraint.pointB.x + constraint.bodyB.position.x - parentBody.position.x;
+            constraint.pointB.y = constraint.pointB.y + constraint.bodyB.position.y - parentBody.position.y;
+            constraint.bodyB = parentBody;
         }
 
         // Remove colliding parts from world
@@ -901,7 +884,7 @@ let DRAG = {
         } else if (event.detail == 2) {
             // Remove body
             Composite.remove(engine.world, this.currentAction.body);
-            // Remove from lists
+            // Remove from relevant lists
             switch (this.currentAction.body.label) {
                 case "wheel":
                     wheels = wheels.filter(
@@ -910,6 +893,7 @@ let DRAG = {
                 case "circle":
                 case "plank":
                 case "box":
+                case "compound":
                     nonStaticParts = nonStaticParts.filter(
                         (other) => this.currentAction.body.parts.indexOf(other) < 0);
                     break;
