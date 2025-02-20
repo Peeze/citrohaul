@@ -61,34 +61,50 @@ var constraints = [];
 // Follow lemons around
 var viewHeight = 1000;
 var viewWidth = viewHeight * canvas.offsetWidth / canvas.offsetHeight;
+var viewCentre = Vector.create(0, 0); //-viewWidth / 2, -viewHeight / 2);
+var viewOffset = Vector.create(0, 0);
+
+// Global variable to hold lemon count
+var previousNumLemons = 0;
 
 function setCanvasBounds() {
     Render.setSize(render, viewWidth, viewHeight);
 
     // Average position of lemons
-    if (lemons.length != 0) {
-        var position = Vector.create(0, 0);
-        for (const lemon of lemons) {
-            position = Vector.add(position, lemon.position);
+    // Exclude lemons below view
+    var numLemons = 0;
+    var position = Vector.create(0, 0);
+    for (const lemon of lemons) {
+        if (lemon.position.y <= 0) {
+            numLemons += 1;
+            Vector.add(position, lemon.position, position);
         }
-        position = Vector.div(position, lemons.length);
-
-        // Substract half canvas width and height to centre view
-        position = Vector.sub(position, Vector.div(Vector.create(viewWidth, viewHeight), 2));
-
-        // Limit view so it does not fall under "ground level"
-        position.y = Math.min(position.y, -viewHeight);
-        Bounds.shift(render.bounds, position);
-    } else {
-        Bounds.shift(render.bounds, Vector.create(-viewWidth / 2, -viewHeight));
     }
+    if (numLemons != 0) {
+        position = Vector.div(position, numLemons);
+    }
+    // If number of lemon changed, adjust offset to avoid jumping view
+    if (numLemons != previousNumLemons) {
+        console.log(position);
+        Vector.add(viewOffset, Vector.sub(viewCentre, position), viewOffset);
+        previousNumLemons = numLemons;
+    }
+    viewCentre = position;
+
+    // Calculate corner coordinates
+    var position = Vector.sub(viewCentre, Vector.div(Vector.create(viewWidth, viewHeight), 2));
+
+    // Apply manual offset
+    // Limit offset y dimension so that view does not fall under "ground level"
+    viewOffset.y = Math.min(viewOffset.y, -(position.y + viewHeight));
+    Vector.add(position, viewOffset, position);
+
+    Bounds.shift(render.bounds, position);
 }
 
 // Calculate view before render
 Events.on(render, "beforeRender", (e) => {
-    if (!runner || runner.enabled) {
-        setCanvasBounds();
-    }
+    setCanvasBounds();
 });
 // Adjust viewWidth when canvas size changes
 // TODO: Prevent that view window resets to starting position
@@ -848,6 +864,7 @@ let NEW_LEMON = {
 // Digit8: Drag and delete
 let DRAG = {
     inProgress: false,
+    moveView: false,
     currentAction: { },
 
     // Select body to be moved
@@ -875,10 +892,9 @@ let DRAG = {
             }
         }
 
-        // If no body under mouse cursor, end mouse action
+        // If no body under mouse cursor, move View instead
         if (!this.currentAction.body) {
-            this.currentAction = { };
-            this.inProgress = false;
+            this.moveView = true;
 
         // On doubeclick: delete
         } else if (event.detail == 2) {
@@ -913,6 +929,7 @@ let DRAG = {
             // Reset mouse action
             this.currentAction = { };
             this.inProgress = false;
+            this.moveView = false;
 
         } else {
             // Offset of object position from mouse
@@ -926,18 +943,22 @@ let DRAG = {
         }
     },
 
-    // Set body position
+    // Set body position or adjust viewOffset
     mousemove: function(event, engine, render) {
         if (this.inProgress) {
-            var newPosition = Vector.add(render.mouse.position, this.currentAction.offset);
-            Body.setPosition(this.currentAction.body, newPosition);
+            if (this.moveView) {
+                Vector.add(viewOffset, Vector.create(-event.movementX, -event.movementY), viewOffset);
+            } else {
+                var newPosition = Vector.add(render.mouse.position, this.currentAction.offset);
+                Body.setPosition(this.currentAction.body, newPosition);
+            }
         }
     },
 
     // Release body
     // Reinstate former staticness
     mouseup: function(event, engine, render) {
-        if (this.inProgress) {
+        if (this.inProgress && !this.moveView) {
             // If in drawing mode: Adjust length of constraints
             if (!runner.enabled) {
                 for (const constraint of this.currentAction.constraints) {
@@ -960,11 +981,12 @@ let DRAG = {
 
             // Reinstate "staticness"
             Body.setStatic(this.currentAction.body, this.currentAction.isStatic);
-
-            // Reset currentAction
-            this.inProgress = false;
-            this.currentAction = { };
         }
+
+        // Reset currentAction
+        this.inProgress = false;
+        this.moveView = false;
+        this.currentAction = { };
     },
 }
 
