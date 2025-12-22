@@ -26,6 +26,32 @@ var Engine = Matter.Engine,
     Composite = Matter.Composite,
     Constraint = Matter.Constraint;
 
+// Load audio files
+var audio = {
+    woodClick:   {asset: new Audio("snd/wood_click.mp3"),      volume: 1.0, lastPlayed: 0,},
+    woodDrop:    {asset: new Audio("snd/wood_drop.mp3"),       volume: 1.0, lastPlayed: 0,},
+    dragWood01:  {asset: new Audio("snd/drag_wood_01.mp3"),   volume: 0.3, lastPlayed: 0,},
+    dragWood08:  {asset: new Audio("snd/drag_wood_08.mp3"),   volume: 0.3, lastPlayed: 0,},
+    metalClick:  {asset: new Audio("snd/metal_click.mp3"),     volume: 1.0, lastPlayed: 0,},
+    metalDrop:   {asset: new Audio("snd/metal_drop.mp3"),      volume: 1.0, lastPlayed: 0,},
+    dragMetal04: {asset: new Audio("snd/drag_metal_04.mp3"), volume: 0.3, lastPlayed: 0,},
+}
+
+function playAudio(audioNode) {
+    var now = Date.now();
+    // Cooldown 50 ms
+    if (now - audioNode.lastPlayed > 50) {
+        var newAudio = audioNode.asset.cloneNode();
+        newAudio.volume = audioNode.volume;
+
+        // Play audio
+        newAudio.play();
+
+        // Set lastPlayed on original audioNode
+        audioNode.lastPlayed = now;
+    }
+}
+
 // Create an engine
 var engine = Engine.create();
 
@@ -85,7 +111,6 @@ function setCanvasBounds() {
     }
     // If number of lemon changed, adjust offset to avoid jumping view
     if (numLemons != previousNumLemons) {
-        console.log(position);
         Vector.add(viewOffset, Vector.sub(viewCentre, position), viewOffset);
         previousNumLemons = numLemons;
     }
@@ -214,6 +239,9 @@ let NEW_WHEEL = {
 
         // Add to world
         Composite.add(engine.world, this.currentAction.body);
+
+        // Play audio
+        playAudio(audio.woodClick);
     },
 
     // Scale polygon to desired size
@@ -230,6 +258,11 @@ let NEW_WHEEL = {
             var spriteScale = this.currentAction.radius / 256;
             this.currentAction.body.render.sprite.xScale = spriteScale;
             this.currentAction.body.render.sprite.yScale = spriteScale;
+
+            // Play audio
+            if (scale != 1) {
+                playAudio(audio.dragWood01);
+            }
         }
     },
 
@@ -260,6 +293,9 @@ let NEW_WHEEL = {
                 Composite.add(engine.world, this.currentAction.constraint);
                 constraints.push(this.currentAction.constraint);
             }
+
+            // Play audio
+            playAudio(audio.woodDrop);
 
             // Reset currentAction
             this.inProgress = false;
@@ -402,6 +438,9 @@ let NEW_CIRCLE = {
 
         // Add to world
         Composite.add(engine.world, this.currentAction.body);
+
+        // Play audio
+        playAudio(audio.woodClick);
     },
 
     // Scale polygon to desired size
@@ -413,6 +452,11 @@ let NEW_CIRCLE = {
 
             Body.scale(this.currentAction.body, scale, scale);
             this.currentAction.radius = newRadius;
+
+            // Play audio
+            if (scale != 1) {
+                playAudio(audio.dragWood08);
+            }
         }
     },
 
@@ -439,6 +483,9 @@ let NEW_CIRCLE = {
 
             // Add to world
             Composite.add(engine.world, this.currentAction.body);
+
+            // Play audio
+            playAudio(audio.woodDrop);
 
             // Reset currentAction
             this.inProgress = false;
@@ -499,6 +546,9 @@ let NEW_PLANK = {
 
         // Add to world
         Composite.add(engine.world, this.currentAction.body);
+
+        // Play audio
+        playAudio(audio.woodClick);
     },
 
     // Update (create new) rectangle based on new mouse position
@@ -518,6 +568,11 @@ let NEW_PLANK = {
 
             // Add to world
             Composite.add(engine.world, this.currentAction.body);
+
+            // Play audio
+            if (event.movementX != 0 || event.movementY != 0) {
+                playAudio(audio.dragWood08);
+            }
         }
     },
 
@@ -544,6 +599,9 @@ let NEW_PLANK = {
 
             // Add to world
             Composite.add(engine.world, this.currentAction.body);
+
+            // Play audio
+            playAudio(audio.woodDrop);
 
             // Reset currentAction
             this.inProgress = false;
@@ -599,6 +657,9 @@ let NEW_BOX = {
 
         // Add to world
         Composite.add(engine.world, this.currentAction.body);
+
+        // Play audio
+        playAudio(audio.woodClick);
     },
 
     // Update (create new) rectangle based on new mouse position
@@ -619,6 +680,11 @@ let NEW_BOX = {
 
             // Add to world
             Composite.add(engine.world, this.currentAction.body);
+
+            // Play audio
+            if (event.movementX != 0 || event.movementY != 0) {
+                playAudio(audio.dragWood08);
+            }
         }
     },
 
@@ -646,6 +712,9 @@ let NEW_BOX = {
 
             // Add to world
             Composite.add(engine.world, this.currentAction.body);
+
+            // Play audio
+            playAudio(audio.woodDrop);
 
             // Reset currentAction
             this.inProgress = false;
@@ -684,6 +753,9 @@ let NEW_JOINT = {
 
         // Add to world
         Composite.add(engine.world, this.currentAction.constraint);
+
+        // Play audio
+        playAudio(audio.metalClick);
     },
 
     // Replace constraint with new length
@@ -697,6 +769,11 @@ let NEW_JOINT = {
 
             // Add to world
             Composite.add(engine.world, this.currentAction.constraint);
+
+            // Play audio
+            if (event.movementX != 0 || event.movementY != 0) {
+                playAudio(audio.dragMetal04);
+            }
         }
     },
 
@@ -749,7 +826,7 @@ let NEW_JOINT = {
             }
 
             // Do not add to the world if:
-            // - Both start and end of constraints are not a body
+            // - Start or end of constraints are not a body
             // - Start and end are the same body
             if (bodyA && bodyB && bodyA !== bodyB) {
                 this.currentAction.constraint = Constraint.create({...this.matterOptions,
@@ -758,6 +835,9 @@ let NEW_JOINT = {
                 this.currentAction.constraint.label = this.label;
                 Composite.add(engine.world, this.currentAction.constraint);
                 constraints.push(this.currentAction.constraint);
+
+                // Play audio
+                playAudio(audio.metalDrop);
             }
 
             // Reset currentAction
@@ -827,6 +907,9 @@ let NEW_LEMON = {
 
         // Add to world
         Composite.add(engine.world, this.currentAction.body);
+
+        // Play audio
+        playAudio(audio.woodClick);
     },
 
     // Move lemon to mouse position
