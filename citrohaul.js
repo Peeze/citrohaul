@@ -2,7 +2,7 @@
 //
 // TODO:
 // - Add better textures (wheels, lemons, ground)
-// - Add sound design
+// - Add better sound design
 // - Save/load creations
 //
 // Created by (c) Peeze 2025.
@@ -1073,7 +1073,6 @@ let DRAG = {
     },
 }
 
-var mouseAction = NEW_WHEEL; // Default mouse action
 
 ////////////
 // EVENTS //
@@ -1082,20 +1081,131 @@ var mouseAction = NEW_WHEEL; // Default mouse action
 // Add bodies on mouseclick
 // On mousedown: create body at mouse position
 addEventListener("mousedown", (e) => {
-    if (e.which == 1) {
-        mouseAction.mousedown(event, engine, render);
+    if (e.which == 1 && e.target === canvas) {
+        mouseAction.mousedown(e, engine, render);
     }
 });
 
 // On mousemove
 addEventListener("mousemove", (e) => {
-    mouseAction.mousemove(event, engine, render);
+    mouseAction.mousemove(e, engine, render);
 });
 
 // On mouseup
 addEventListener("mouseup", (e) => {
-    mouseAction.mouseup(event, engine, render);
+    mouseAction.mouseup(e, engine, render);
 });
+
+
+// Toolbox buttons
+const toolbox = document.getElementById("toolbox");
+const toolboxButton1 = document.getElementById("toolbox-button-1");
+const toolboxButton2 = document.getElementById("toolbox-button-2");
+const toolboxButton3 = document.getElementById("toolbox-button-3");
+const toolboxButton4 = document.getElementById("toolbox-button-4");
+const toolboxButton5 = document.getElementById("toolbox-button-5");
+const toolboxButton6 = document.getElementById("toolbox-button-6");
+const toolboxButton7 = document.getElementById("toolbox-button-7");
+const toolboxButton8 = document.getElementById("toolbox-button-8");
+
+const toolboxButtons = [
+    toolboxButton1, toolboxButton2, toolboxButton3, toolboxButton4,
+    toolboxButton5, toolboxButton6, toolboxButton7, toolboxButton8,
+]
+const toolboxActions = [
+    NEW_WHEEL, NEW_CIRCLE, NEW_PLANK, NEW_BOX,
+    NEW_JOINT, NEW_SPRING, NEW_LEMON, DRAG,
+]
+
+// Default mouse action
+let activeToolboxButton = toolboxButton8;
+var mouseAction = DRAG;
+
+for (let i = 0; i < toolboxButtons.length; i++) {
+    // Attach images and actions to buttons
+    toolboxButtons[i].imageButton = `url(img/button${i + 1}.png)`
+    toolboxButtons[i].imageButtonPressed = `url(img/button${i + 1}_pressed.png)`
+    toolboxButtons[i].mouseAction = toolboxActions[i];
+
+    // Right-align buttons with space
+    //toolboxButtons[i].style.marginLeft = "46px";
+
+    // Set background image
+    toolboxButtons[i].style.backgroundSize = "100%";
+    if (toolboxButtons[i] === activeToolboxButton) {
+        toolboxButtons[i].style.backgroundImage = toolboxButtons[i].imageButtonPressed;
+    } else {
+        toolboxButtons[i].style.backgroundImage = toolboxButtons[i].imageButton;
+    }
+
+    // Change background image on hover
+    // Mouse enter
+    toolboxButtons[i].addEventListener("mouseenter", (e) => {
+        toolboxButtons[i].style.backgroundImage = toolboxButtons[i].imageButtonPressed;
+
+        // Adjust padding
+        toolboxButtons[i].childNodes[1].style.paddingLeft = "4px";
+        toolboxButtons[i].childNodes[1].style.paddingTop = "4px";
+    });
+
+    // Mouse leave
+    toolboxButtons[i].addEventListener("mouseleave", (e) => {
+        if (toolboxButtons[i] === activeToolboxButton) {
+            toolboxButtons[i].style.backgroundImage = toolboxButtons[i].imageButtonPressed;
+
+            // Adjust padding
+            toolboxButtons[i].childNodes[1].style.paddingLeft = "4px";
+            toolboxButtons[i].childNodes[1].style.paddingTop = "4px";
+        } else {
+            toolboxButtons[i].style.backgroundImage = toolboxButtons[i].imageButton;
+
+            // Adjust padding
+            toolboxButtons[i].childNodes[1].style.paddingLeft = "0px";
+            toolboxButtons[i].childNodes[1].style.paddingTop = "0px";
+        }
+    });
+
+    toolboxButtons[i].addEventListener("click", (e) => {
+        if (!mouseAction.inProgress) {
+            mouseAction = toolboxButtons[i].mouseAction;
+
+            // Release previous active button
+            activeToolboxButton.style.backgroundImage = activeToolboxButton.imageButton;
+            // Adjust padding
+            activeToolboxButton.childNodes[1].style.paddingLeft = "0px";
+            activeToolboxButton.childNodes[1].style.paddingTop = "0px";
+
+            // Press current button
+            toolboxButtons[i].style.backgroundImage = toolboxButtons[i].imageButtonPressed;
+
+            // Change actve button
+            activeToolboxButton = toolboxButtons[i];
+        }
+    });
+}
+
+// Toolbox space bar
+const toolboxButtonSpace = document.getElementById("toolbox-button-space");
+toolboxButtonSpace.style.width = "96px";
+toolboxButtonSpace.style.backgroundSize = "100%";
+toolboxButtonSpace.style.backgroundImage = "url(img/button_space.png)";
+
+// Change background image on hover
+// Mouse enter
+toolboxButtonSpace.addEventListener("mouseenter", (e) => {
+    toolboxButtonSpace.style.backgroundImage = "url(img/button_space_pressed.png)";
+});
+
+// Mouse leave
+toolboxButtonSpace.addEventListener("mouseleave", (e) => {
+    toolboxButtonSpace.style.backgroundImage = "url(img/button_space.png)";
+});
+
+// Click: launch simulation
+toolboxButtonSpace.addEventListener("click", (e) => {
+    toggleSimulation();
+});
+
 
 // Turn wheels with left/right arrows
 // Parameters for wheel torque depending on size
@@ -1135,6 +1245,23 @@ addEventListener("keydown", (e) => {
 });
 
 // Spacebar: toggle simulation mode
+function toggleSimulation() {
+    runner.enabled = !runner.enabled;
+    render.options.wireframes = !render.options.wireframes;
+    render.options.showAxes = !render.options.showAxes;
+
+    // (Un)hide toolbox
+    toolbox.hidden = runner.enabled;
+
+    // Change colour of constraints
+    var strokeStyle = runner.enabled ? "#858585" : "#FFFFFF";
+    NEW_JOINT.matterOptions.render.strokeStyle = strokeStyle;
+    NEW_SPRING.matterOptions.render.strokeStyle = strokeStyle;
+    for (const constraint of constraints) {
+        constraint.render.strokeStyle = strokeStyle;
+    }
+}
+
 var spacebarAllowed = true;  // To prevent repeat toggles when spacebar is held (event.repeat does not work)
 addEventListener("keydown", (e) => {
     if (spacebarAllowed) {
@@ -1143,18 +1270,7 @@ addEventListener("keydown", (e) => {
             // Pause the engine, change colour scheme
             case "Space":
                 spacebarAllowed = false;
-
-                runner.enabled = !runner.enabled;
-                render.options.wireframes = !render.options.wireframes;
-                render.options.showAxes = !render.options.showAxes;
-
-                // Change colour of constraints
-                var strokeStyle = runner.enabled ? "#858585" : "#FFFFFF";
-                NEW_JOINT.matterOptions.render.strokeStyle = strokeStyle;
-                NEW_SPRING.matterOptions.render.strokeStyle = strokeStyle;
-                for (const constraint of constraints) {
-                    constraint.render.strokeStyle = strokeStyle;
-                }
+                toggleSimulation();
                 break;
         }
     }
@@ -1175,29 +1291,30 @@ addEventListener("keydown", (e) => {
         switch (e.code) {
             // Number keys: change body type
             case "Digit1":
-                mouseAction = NEW_WHEEL;
+                toolboxButton1.click();
                 break;
             case "Digit2":
-                mouseAction = NEW_CIRCLE;
+                toolboxButton2.click();
                 break;
             case "Digit3":
-                mouseAction = NEW_PLANK;
+                toolboxButton3.click();
                 break;
             case "Digit4":
-                mouseAction = NEW_BOX;
+                toolboxButton4.click();
                 break;
             case "Digit5":
-                mouseAction = NEW_JOINT;
+                toolboxButton5.click();
                 break;
             case "Digit6":
-                mouseAction = NEW_SPRING;
+                toolboxButton6.click();
                 break;
             case "Digit7":
-                mouseAction = NEW_LEMON;
+                toolboxButton7.click();
                 break;
             case "Digit8":
-                mouseAction = DRAG;
+                toolboxButton8.click();
                 break;
         }
     }
 });
+
