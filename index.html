@@ -19,7 +19,7 @@ html, body {
     height: 100%;
 }
 
-div {
+div .header .middle .footer {
     position: absolute;
     width: 100%
 }
@@ -38,15 +38,49 @@ div {
 .footer {
     height: var(--footer-size);
     background: white;
-
     bottom: 0
 }
 
 #render-canvas {
     position: absolute;
+    cursor: crosshair;
     height: 100%;
     width: 100%;
 }
+
+#toolbox {
+    position: absolute;
+    top: 2%;
+    left: 1%;
+    font-family: monospace;
+    color: white;
+}
+
+.toolbox-button {
+    position: relative;
+    float: left;
+    height: 50px;
+    width: 50px;
+}
+
+.toolbox-button-label {
+    display: flex;
+    float: left;
+    height: 50px;
+    align-items: center;
+    padding-left: 10px;
+}
+
+.toolbox-button-symbol {
+    display: none;
+    padding-top: 2px;
+    padding-right: 30px;
+    text-align: center;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: black;
+}
+
 </style>
 </head>
 
@@ -54,6 +88,83 @@ div {
     <div class="header"></div>
     <div class="middle" id="render-canvas-container">
         <canvas id="render-canvas"> </canvas>
+        <div id="toolbox">
+            <table>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-1">
+                            <div class="toolbox-button-symbol">!</br>1</div>
+                        </div>
+                        <div class="toolbox-button-label"> Wheel </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-2">
+                            <div class="toolbox-button-symbol">@</br>2</div>
+                        </div>
+                        <div class="toolbox-button-label"> Circle </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-3">
+                            <div class="toolbox-button-symbol">#</br>3</div>
+                        </div>
+                        <div class="toolbox-button-label"> Plank </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-4">
+                            <div class="toolbox-button-symbol">$</br>4</div>
+                        </div>
+                        <div class="toolbox-button-label"> Box </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-5">
+                            <div class="toolbox-button-symbol">^</br>5</div>
+                        </div>
+                        <div class="toolbox-button-label"> Joint </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-6">
+                            <div class="toolbox-button-symbol">&amp;</br>6</div>
+                        </div>
+                        <div class="toolbox-button-label"> Spring </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-7">
+                            <div class="toolbox-button-symbol">*</br>7</div>
+                        </div>
+                        <div class="toolbox-button-label"> Lemon </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-8">
+                            <div class="toolbox-button-symbol">(</br>8</div>
+                        </div>
+                        <div class="toolbox-button-label"> Drag / delete </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="toolbox-button" id="toolbox-button-space">
+                            <div class="toolbox-button-symbol"></div>
+                        </div>
+                        <div class="toolbox-button-label"> Launch </div>
+                    </td>
+                </tr>
+            </table>
+            </div>
+        </div>
     </div>
     <div class="footer"></div>
 

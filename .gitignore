@@ -2,3 +2,5 @@ lib/*
 img/*.xcf
 img/other/*
 img/other
+snd/other/*
+snd/other
